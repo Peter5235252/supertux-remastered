@@ -90,7 +90,6 @@ EOF
             '';
             cmakeFlags = [
               "-DINSTALL_SUBDIR_BIN=bin"
-              "-DUSE_SYSTEM_SDL3_TTF=ON"
             ];
             enableParallelBuilding = true;
             nativeBuildInputs = [
@@ -101,7 +100,6 @@ EOF
             ];
             postFixup = ''
                 wrapProgram $out/bin/supertux2 \
-                  --prefix LIBGL_DRIVERS_PATH ":" "${pkgs.mesa.drivers}/lib/dri" \
                   --prefix LD_LIBRARY_PATH ":" "${pkgs.mesa.drivers}/lib"
             '';
             buildInputs = [
@@ -114,9 +112,6 @@ EOF
               pkgs.libpng
               pkgs.curl
               pkgs.fmt_8
-              pkgs.libGL
-              pkgs.libGLU
-              pkgs.glew
               pkgs.gtest
 
               pkgs.glm

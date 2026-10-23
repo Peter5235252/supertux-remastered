@@ -86,7 +86,6 @@ jobs:
 
           ./vcpkg install --classic --triplet=$VCPKG_TRIPLET \
             fmt    \
-            glew    \
             libogg   \
             libvorbis \
             libraqm    \

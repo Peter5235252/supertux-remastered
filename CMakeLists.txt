@@ -161,8 +161,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
   list(APPEND CMAKE_PREFIX_PATH "/usr")
 endif()
 
-option(ENABLE_OPENGL "Enable OpenGL support" ON)
-option(ENABLE_NETWORKING "Turns on networking features, thus requiring libcurl" ON)
+option(ENABLE_NETWORKING "Build networking features when libcurl is available" ON)
 
 # CI builds should never rely on this, as system SDL2_TTF has no RAQM support, causing Arabic to not be rendered properly.
 # TODO: SDL3
@@ -200,8 +199,6 @@ if(NOT EMSCRIPTEN)
     ${SUPERTUX_ANDROID_PREFER_PKGCONF})
   add_package(TARGET SDL3_ttf
     PKG SDL3_ttf PKG_USE SDL3_ttf::SDL3_ttf CONFIG REQUIRED PKG_CONFIG SDL3_ttf sdl3_ttf)
-  add_package(TARGET libcurl
-    PKG CURL PKG_USE CURL::libcurl PKG_CONFIG libcurl)
   if(ENABLE_NETWORKING)
     add_package(TARGET libcurl
       PKG CURL PKG_USE CURL::libcurl PKG_CONFIG libcurl)
@@ -245,15 +242,8 @@ if(ENABLE_DISCORD)
   add_subdirectory(external/discord-sdk EXCLUDE_FROM_ALL)
 endif()
 
-set(USE_GL_LIBRARY "glew" CACHE STRING "Unused: the OpenGL backends were removed in favor of SDL_GPU (Vulkan).")
-set_property(CACHE USE_GL_LIBRARY PROPERTY STRINGS glew libepoxy)
-
-# OpenGL backends were removed; SDL_GPU (Vulkan) is the only renderer.
-# gl.hpp falls back to plain-enum GL types used by Sampler/Blend.
-set(HAVE_OPENGL NO)
+# Keep HAVE_CURL undefined unless the optional dependency is found.
 set(HAVE_CURL NO)
-set(HAVE_GLEW NO)
-set(HAVE_EPOXY NO)
 
 ## Build stuff
 include(SuperTux/BuildDocumentation)

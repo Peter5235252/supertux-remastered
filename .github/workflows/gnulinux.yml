@@ -69,7 +69,6 @@ jobs:
             sshpass \
             clang \
             g++ \
-            libglu1-mesa-dev \
             libgtest-dev \
             libc++-dev \
             libogg-dev \
@@ -81,8 +80,6 @@ jobs:
             libglib2.0-dev \
             libfreetype6-dev \
             libraqm-dev \
-            libglew-dev \
-            libglbinding-dev \
             libcurl4-openssl-dev \
             libglm-dev \
             libfmt-dev \
@@ -110,7 +107,6 @@ jobs:
             clang \
             gcc-multilib \
             g++-multilib \
-            libglu1-mesa-dev:i386 \
             libogg-dev:i386 \
             libvorbis-dev:i386 \
             libopenal-dev:i386 \
@@ -121,7 +117,6 @@ jobs:
             libcurl4-openssl-dev:i386 \
             zlib1g-dev:i386 \
             libfmt-dev:i386 \
-            libepoxy-dev:i386 \
             libglm-dev
 
           # Let's get out of this directory to disable vcpkg manifest mode.
@@ -161,7 +156,6 @@ jobs:
           BUILD_TYPE: ${{ matrix.build_type }}
           32BIT: ${{ matrix.arch == 32 }}
           MAKE_DOCS: ${{ matrix.documentation }}
-          GLBINDING: ${{ matrix.glbinding }}
           #TESTS: ${{ matrix.os == 'ubuntu-20.04' }}
         run: |
           $Env:GIT_TAG = (& git describe --tags --abbrev=0)
@@ -189,7 +183,6 @@ jobs:
                        "-DVCPKG_TARGET_TRIPLET=x86-linux "
                        "-DVCPKG_MANIFEST_MODE=OFF "
                        "-DPhysFS_PREFER_FIND_PACKAGE=ON"
-                       "-DUSE_GL_LIBRARY=libepoxy"
                      }) `
                      -DBUILD_DOCUMENTATION="$(if ($Env:MAKE_DOCS -eq "true") {"ON"} else {"OFF"})" `
                      -DCMAKE_CXX_FLAGS="$(if ($Env:32BIT -eq "true") {"-m32"})" `
@@ -267,7 +260,7 @@ jobs:
       - name: Upload tar archives
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.compiler }}-${{ matrix.build_type }}${{ matrix.glbinding == 'ON' && '-glbinding' || '' }}-tgz"
+          name: "${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.compiler }}-${{ matrix.build_type }}-tgz"
           path: build/upload/*Linux.tar.gz
           if-no-files-found: ignore
 

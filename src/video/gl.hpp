@@ -16,37 +16,6 @@
 
 #pragma once
 
-#include <config.h>
-
-#ifdef HAVE_OPENGL
-
-#if defined(USE_OPENGLES2)
-#  include <SDL3/SDL_opengles2.h>
-#elif defined(USE_OPENGLES1)
-#  include <SDL3/SDL_opengles.h>
-#elif defined(HAVE_EPOXY)
-#  include <epoxy/gl.h>
-#  define GL_NONE_BIT 0
-#else
-#  include <GL/glew.h>
-#  define GL_NONE_BIT 0
-#endif
-
-#ifdef USE_OPENGLES1
-#  define glOrtho glOrthof
-#endif
-
-#ifdef USE_OPENGLES2
-// These are required for OpenGL3.3Core, but not availabel en GLES2,
-// simple no-op replacement looks prettier than #ifdef
-inline void glGenVertexArrays(GLsizei n, GLuint *arrays) {}
-inline void glDeleteVertexArrays(GLsizei n, GLuint *arrays) {}
-inline void glBindVertexArray(GLuint vao) {}
-#endif
-
-#else
-
-// These are used by SDL code when OpenGL is completely disabled
 #define GLint int
 
 enum GLenum {
@@ -62,5 +31,3 @@ enum GLenum {
   GL_MIRRORED_REPEAT,
   GL_REPEAT
 };
-
-#endif

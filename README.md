@@ -101,6 +101,10 @@ not stable releases.
   x86_64 and arm64. Gameplay rendering is verified on real hardware
   (Intel HD 620 Hackintosh), because headless macOS runners cannot
   complete Metal frames. CI is not proof that all GPUs or HDR displays work.
+- The Linux package workflow also launches a bundled level under Xvfb with
+  Mesa lavapipe, renders frames through SDL_GPU/Vulkan, and verifies the
+  saved PNG screenshot. This provides repeatable software-renderer coverage;
+  it does not replace testing on physical GPUs and native platform drivers.
 
 ---
 

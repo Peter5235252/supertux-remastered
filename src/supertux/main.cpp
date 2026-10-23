@@ -481,9 +481,6 @@ SDLSubsystem::SDLSubsystem()
 {
   Uint32 flags = SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD;
 
-#ifdef HAVE_EPOXY
-  SDL_SetHint(SDL_HINT_VIDEO_FORCE_EGL, "1");
-#endif
   if (SDL_Init(flags) == false)
   {
     std::stringstream msg;

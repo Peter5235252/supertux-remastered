@@ -31,6 +31,11 @@ on:
       - main
     paths-ignore:
       - '**/*.md'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
 
 jobs:
   linux:
@@ -42,11 +47,11 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Install dependencies (no OpenGL)
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            cmake ninja-build build-essential patchelf \
+            cmake ninja-build build-essential patchelf xvfb mesa-vulkan-drivers \
             libogg-dev libvorbis-dev libopenal-dev \
             libsdl3-dev libsdl3-image-dev libsdl3-ttf-dev \
             libfreetype6-dev libraqm-dev \
@@ -86,8 +91,42 @@ jobs:
           if ldd "$BIN" | grep -q "not found"; then
             echo "missing shared libraries:"; ldd "$BIN" | grep "not found"; exit 1
           fi
-          echo "== smoke test =="
-          SDL_VIDEODRIVER=dummy "$BIN" --version
+          echo "== startup smoke test =="
+          "$BIN" --version
+          echo "== Vulkan render smoke test (lavapipe) =="
+          LEVEL="$(find SuperTux-portable -type f -path '*/levels/bonus1/ice_test.stl' -print -quit)"
+          [ -n "$LEVEL" ] || { echo "bundled smoke-test level missing"; exit 1; }
+          LVP_ICD="$(find /usr/share/vulkan/icd.d -maxdepth 1 -name 'lvp_icd*.json' -print -quit)"
+          [ -n "$LVP_ICD" ] || { echo "Mesa lavapipe ICD missing"; exit 1; }
+          mkdir -p graphics-smoke-user
+          set -o pipefail
+          xvfb-run -a -s "-screen 0 1280x800x24" env \
+            VK_ICD_FILENAMES="$LVP_ICD" \
+            SDL_VIDEODRIVER=x11 \
+            SDL_AUDIODRIVER=dummy \
+            ALSOFT_DRIVERS=null \
+            SUPERTUX_AUTOTEST_FRAMES=3 \
+            "$BIN" --window --geometry 640x480 --disable-sound --disable-music \
+            --userdir "$PWD/graphics-smoke-user" "$LEVEL" 2>&1 | tee graphics-smoke.log
+          grep -q "SDL_GPU driver: vulkan" graphics-smoke.log
+          grep -q "\[autotest\] 3 frames drawn" graphics-smoke.log
+          SCREENSHOT="$(find "$PWD/graphics-smoke-user" -type f -name 'screenshot*.png' -print -quit)"
+          [ -n "$SCREENSHOT" ] || { echo "render smoke test did not save a screenshot"; exit 1; }
+          python3 - "$SCREENSHOT" <<'PY'
+          import os
+          import struct
+          import sys
+
+          path = sys.argv[1]
+          with open(path, "rb") as image:
+              header = image.read(24)
+          if header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
+              raise SystemExit(f"invalid PNG screenshot: {path}")
+          width, height = struct.unpack(">II", header[16:24])
+          if width != 640 or height != 480 or os.path.getsize(path) <= 1024:
+              raise SystemExit(f"unexpected/empty screenshot: {width}x{height}, {path}")
+          print(f"Rendered screenshot verified: {width}x{height}, {os.path.getsize(path)} bytes")
+          PY
           tar -czf supertux-remastered-linux-portable.tar.gz -C . SuperTux-portable
           ls -lh supertux-remastered-linux-portable.tar.gz
 
@@ -104,6 +143,7 @@ jobs:
           overwrite: true
 
       - name: Upload Linux package (release asset)
+        if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: test-build
@@ -133,7 +173,7 @@ jobs:
           restore-keys: |
             hd-vcpkg-win-x64-
 
-      - name: Install dependencies (no glew)
+      - name: Install dependencies
         if: steps.cache-dependencies.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
@@ -194,6 +234,8 @@ jobs:
           foreach ($need in @("SDL3.dll", "SDL3_image.dll", "SDL3_ttf.dll")) {
             if (-not (Get-ChildItem -Recurse -Filter $need SuperTux-portable)) { throw "missing $need" }
           }
+          & $exe --version
+          if ($LASTEXITCODE -ne 0) { throw "supertux2 --version failed with exit code $LASTEXITCODE" }
           Compress-Archive -Path SuperTux-portable -DestinationPath supertux-remastered-windows-portable.zip -Force
           Get-ChildItem supertux-remastered-windows-portable.zip | Select-Object Name, Length
 
@@ -209,6 +251,7 @@ jobs:
           overwrite: true
 
       - name: Upload Windows package (release asset)
+        if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: test-build
@@ -240,7 +283,7 @@ jobs:
           restore-keys: |
             hd-vcpkg-mac-
 
-      - name: Install dependencies (no glew, both archs)
+      - name: Install dependencies (both architectures)
         env:
           VCPKG_TRIPLET: arm64-osx
         run: |
@@ -346,6 +389,7 @@ jobs:
           overwrite: true
 
       - name: Upload macOS package (release asset)
+        if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: test-build

@@ -65,7 +65,6 @@ jobs:
           cd C:/
           vcpkg integrate install
           vcpkg install curl:${{ matrix.arch }}-windows
-          vcpkg install glew:${{ matrix.arch }}-windows
           vcpkg install libogg:${{ matrix.arch }}-windows
           vcpkg install libvorbis:${{ matrix.arch }}-windows
           vcpkg install openal-soft:${{ matrix.arch }}-windows
@@ -92,7 +91,6 @@ jobs:
           GIT_BRANCH: ${{ steps.slugify.outputs.branch }}
           ARCH: ${{ matrix.arch }}
           BUILD_TYPE: ${{ matrix.build_type }}
-          GLBINDING: ${{ matrix.glbinding }}
         run: |
           $Env:GIT_TAG = (& git describe --tags --abbrev=0)
 

@@ -72,7 +72,6 @@
       ("sdl3-image" ,sdl3-image)
       ("openal" ,openal)
       ("mesa" ,mesa)
-      ("glew" ,glew)
       ("libvorbis" ,libvorbis)
       ("libogg" ,libogg)
       ("physfs" ,physfs)
