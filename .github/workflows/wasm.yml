@@ -16,6 +16,7 @@
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 name: WebAssembly
+
 on:
   workflow_dispatch:
   push:
@@ -24,6 +25,11 @@ on:
     tags:
       - '*'
   pull_request: {}
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   wasm:
