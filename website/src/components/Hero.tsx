@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, Download, Sparkles } from 'lucide-react'
+import { ArrowDown, ArrowRight, Download, Play, Sparkles } from 'lucide-react'
 import { usePlatform } from '../hooks'
 import { asset, detectArch } from '../lib'
 import { PLATFORM_META } from '../data'
@@ -67,6 +67,11 @@ export function Hero() {
               <Download size={18} />
               Install for {meta.short}
               <span className="button__arrow"><ArrowRight size={17} /></span>
+            </a>
+            <a href="wasm/supertux2.html" className="button button--glass button--hero">
+              <Play size={16} />
+              Play in Browser (WebGPU)
+              <span className="button__badge">Experimental</span>
             </a>
             <a href="#worlds" className="button button--glass button--hero">
               Explore the worlds

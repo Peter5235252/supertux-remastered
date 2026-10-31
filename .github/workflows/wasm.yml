@@ -113,12 +113,21 @@ jobs:
           path: build/upload/*
           if-no-files-found: ignore
 
+      - name: Build website (React/Vite)
+        if: github.ref == 'refs/heads/main' && matrix.build_type == 'Release'
+        working-directory: website
+        run: |
+          npm ci
+          VITE_BASE=/supertux-remastered/ npm run build
+          ls -la dist/
+
       - name: Prepare publish dir (website + WASM)
         if: github.ref == 'refs/heads/main' && matrix.build_type == 'Release'
         run: |
           mkdir -p publish/wasm
-          cp index.html publish/
-          # Only copy small files (HTML, JS, WASM, icons) - NOT the large .data file
+          # Copy React website build to root
+          cp -r website/dist/* publish/
+          # Copy WASM build (excluding .data) to wasm/
           cd build/upload
           for f in *; do
             case "$f" in
@@ -136,7 +145,7 @@ jobs:
           files: build/upload/*.data
           fail_on_unmatched_files: false
 
-      - name: Publish website + small WASM assets to GitHub Pages
+      - name: Publish website + WASM port to GitHub Pages
         if: github.ref == 'refs/heads/main' && matrix.build_type == 'Release'
         uses: peaceiris/actions-gh-pages@v4
         with:
