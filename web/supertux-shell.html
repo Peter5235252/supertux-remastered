@@ -267,9 +267,9 @@
     let uploadBasePath = '';
     window.supertux_upload = function(base) {
       uploadBasePath = String(base || '')
-        .replace(/^\\/+/, '')
-        .replace(/\\.\\.(?:\\/|$)/g, '')
-        .replace(/\\/+/g, '/');
+        .replace(/^\/+/, '')
+        .replace(/\.\.(?:\/|$)/g, '')
+        .replace(/\/+/g, '/');
       if (uploadBasePath && !uploadBasePath.endsWith('/')) {
         uploadBasePath += '/';
       }
@@ -383,11 +383,21 @@
       noInitialRun: false,
       noExitRuntime: true,
 
-      locateFile: (path, prefix) => {
+      locateFile: (path) => {
         if (path.endsWith('.data')) {
           return DATA_BLOB_URL;
         }
-        return prefix + path;
+
+        // Resolve runtime assets beside this HTTPS page, never against a
+        // build-machine file:/// URL embedded in Emscripten's script prefix.
+        const assetPath = /^file:\/\//i.test(path)
+          ? path.slice(path.lastIndexOf('/') + 1)
+          : path;
+        const resolved = new URL(assetPath, new URL('./', window.location.href));
+        if (resolved.protocol !== 'https:' && resolved.protocol !== 'http:') {
+          throw new Error('Blocked non-web runtime asset URL: ' + resolved.href);
+        }
+        return resolved.href;
       },
 
       onRuntimeInitialized: () => {
