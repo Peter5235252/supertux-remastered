@@ -136,6 +136,9 @@ jobs:
             esac
           done
           cd ../..
+          # Copy shader files for WebGPU WGSL pre-compilation
+          mkdir -p publish/wasm/shader
+          cp -a website/src/data/shader/*.wgsl publish/wasm/shader/
           echo "=== Published files ==="
           find publish -type f | head -40
 
