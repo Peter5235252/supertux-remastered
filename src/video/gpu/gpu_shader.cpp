@@ -20,6 +20,11 @@
 
 #include "util/log.hpp"
 
+// Emscripten's SDL3 port may not define SDL_GPU_SHADERFORMAT_WGSL.
+#ifndef SDL_GPU_SHADERFORMAT_WGSL
+#define SDL_GPU_SHADERFORMAT_WGSL (1u << 6)
+#endif
+
 std::string
 GPUShader::load_shader_bytes(const std::string& physfs_path)
 {

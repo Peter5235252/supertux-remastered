@@ -34,6 +34,11 @@
 #include "video/sdl_surface_ptr.hpp"
 #include "video/texture_manager.hpp"
 #include "video/viewport.hpp"
+// Emscripten's SDL3 port may not define SDL_GPU_SHADERFORMAT_WGSL.
+#ifndef SDL_GPU_SHADERFORMAT_WGSL
+#define SDL_GPU_SHADERFORMAT_WGSL (1u << 6)
+#endif
+
 
 void
 GPUVideoSystem::DeviceDeleter::operator()(SDL_GPUDevice* d) const
