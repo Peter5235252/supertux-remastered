@@ -15,12 +15,10 @@ struct RcasUBO {
 @group(3) @binding(0) var src_tex: texture_2d<f32>;
 @group(3) @binding(1) var src_sampler: sampler;
 
-@location(0) var<out> out_color: vec4<f32>;
-
 @fragment
-fn main() -> @location(0) vec4<f32> {
-  let pos = vec2<f32>(@builtin(position));
-  let uv = (pos + 1.0) / 2.0;
-  out_color = textureSample(src_tex, src_sampler, uv);
-  return out_color;
+fn main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
+  // Fragment position is in framebuffer pixels; normalize by source size.
+  let source_size = vec2<f32>(textureDimensions(src_tex));
+  let uv = position.xy / source_size;
+  return textureSample(src_tex, src_sampler, uv);
 }
