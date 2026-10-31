@@ -176,15 +176,25 @@
       if (Module.onReady) Module.onReady();
     };
 
-    // Fallback: hide loading screen after 15 seconds even if supertux_onready
-    // is never called (e.g., if the C++ init path doesn't fire it).
-    setTimeout(() => {
-      const loading = document.getElementById('loading');
-      if (loading && !loading.classList.contains('hidden')) {
-        console.warn('[superTux] supertux_onready not called after 15s — hiding loading screen anyway');
-        loading.classList.add('hidden');
-      }
-    }, 15000);
+    // Global error handler for uncaught exceptions
+    window.onerror = (msg, src, line, col, err) => {
+      console.error('[superTux] Uncaught error:', msg, 'at', src, line, col);
+      document.getElementById('loading').classList.add('hidden');
+      const errEl = document.getElementById('error');
+      errEl.style.display = 'flex';
+      document.getElementById('error-title').textContent = 'Runtime error';
+      document.getElementById('error-msg').textContent = String(msg);
+      return true; // Prevent default browser error handling
+    };
+
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('[superTux] Unhandled promise rejection:', event.reason);
+      document.getElementById('loading').classList.add('hidden');
+      const errEl = document.getElementById('error');
+      errEl.style.display = 'flex';
+      document.getElementById('error-title').textContent = 'Promise rejection';
+      document.getElementById('error-msg').textContent = String(event.reason);
+    });
 
     async function preloadShaders() {
       for (let i = 0; i < SHADERS.length; i++) {
@@ -216,15 +226,40 @@
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = 'supertux2.js';
-        script.onload = resolve;
+        script.onload = () => {
+          console.log('[superTux] supertux2.js loaded');
+          resolve();
+        };
         script.onerror = () => reject(new Error('Failed to load supertux2.js'));
         document.head.appendChild(script);
       });
     }
 
+    // Track if the game actually started
+    let gameStarted = false;
+    const originalOnReady = window.supertux_onready;
+    window.supertux_onready = () => {
+      console.log('[superTux] supertux_onready called — game starting');
+      gameStarted = true;
+      document.getElementById('loading').classList.add('hidden');
+      if (Module.onReady) Module.onReady();
+    };
+
     init().then(() => {
-      // Emscripten is loaded; the game starts itself via ScreenManager::run()
-      // which calls emscripten_set_main_loop on WASM.
+      console.log('[superTux] Init complete, waiting for game to start');
+      // Fallback: if game doesn't start within 30 seconds, show error
+      setTimeout(() => {
+        const loading = document.getElementById('loading');
+        if (loading && !loading.classList.contains('hidden')) {
+          console.error('[superTux] Game did not start within 30s');
+          loading.classList.add('hidden');
+          const errEl = document.getElementById('error');
+          errEl.style.display = 'flex';
+          document.getElementById('error-title').textContent = 'Game failed to start';
+          document.getElementById('error-msg').textContent =
+            'The game did not initialize. This may be a WebGPU compatibility issue. Check the browser console (F12) for details.';
+        }
+      }, 30000);
     }).catch((err) => {
       document.getElementById('loading').classList.add('hidden');
       const errEl = document.getElementById('error');
