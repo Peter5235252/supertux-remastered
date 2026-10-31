@@ -118,9 +118,25 @@ jobs:
         run: |
           mkdir -p publish/wasm
           cp index.html publish/
-          cp -r build/upload/* publish/wasm/
+          # Only copy small files (HTML, JS, WASM, icons) - NOT the large .data file
+          cd build/upload
+          for f in *; do
+            case "$f" in
+              *.data) echo "Skipping large data file: $f" ;;
+              *) cp -r "$f" "../../publish/wasm/" ;;
+            esac
+          done
+          cd ../..
 
-      - name: Publish website + WASM port to GitHub Pages
+      - name: Upload .data file to GitHub Release
+        if: github.ref == 'refs/heads/main' && matrix.build_type == 'Release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: test-build
+          files: build/upload/*.data
+          fail_on_unmatched_files: false
+
+      - name: Publish website + small WASM assets to GitHub Pages
         if: github.ref == 'refs/heads/main' && matrix.build_type == 'Release'
         uses: peaceiris/actions-gh-pages@v4
         with:

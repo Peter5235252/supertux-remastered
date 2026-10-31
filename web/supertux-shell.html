@@ -133,12 +133,23 @@
     }
 
     // Configure the emscripten Module before the glue script runs.
+    // Override locateFile to fetch the large .data file from GitHub Releases
+    // (it exceeds GitHub Pages' 100MB file size limit).
+    const DATA_URL = 'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/supertux2.data';
+
     const Module = {
       canvas: document.getElementById('canvas'),
       print: (text) => { console.log('[superTux]', text); },
       printErr: (text) => { console.warn('[superTux]', text); },
       noInitialRun: true,
       noExitRuntime: true,
+
+      locateFile: (path, prefix) => {
+        if (path.endsWith('.data')) {
+          return DATA_URL;
+        }
+        return prefix + path;
+      },
 
       onReady: null,
 
