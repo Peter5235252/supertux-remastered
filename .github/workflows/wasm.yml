@@ -136,6 +136,13 @@ jobs:
             esac
           done
           cd ../..
+          # GitHub Pages rejects individual files larger than 100 MiB.
+          # Split the Emscripten data package into same-origin 50 MB chunks.
+          test -f build/upload/supertux2.data
+          split -b 50M -a 2 build/upload/supertux2.data publish/wasm/supertux2.data.part
+          echo "=== Published game-data chunks ==="
+          ls -lh publish/wasm/supertux2.data.part*
+
           # Copy shader files for WebGPU WGSL pre-compilation
           mkdir -p publish/wasm/shader
           cp -a data/shader/*.wgsl publish/wasm/shader/
