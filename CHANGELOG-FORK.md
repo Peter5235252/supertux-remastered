@@ -1,5 +1,21 @@
 # Fork Changelog
 
+## 2026-10-31 — Website and a real Linux installer
+
+- Added `website/`: a React + Vite landing page with real 1920×1080 screenshots
+  captured from the rolling Linux build, platform detection, a renderer
+  explainer, an install flow, the fork timeline and an honest FAQ.
+- Added `installer/`: a native Rust + egui graphical installer for x86_64
+  Linux. It downloads the `test-build` asset, verifies the GitHub SHA-256
+  digest, unpacks the portable tree, bundles SDL3_image/SDL3_ttf, writes a
+  desktop entry and uninstaller, and keeps a `--cli` fallback for advanced
+  users. The build is published at `website/public/downloads/` with a
+  `SHA256SUMS` file.
+- Added GitHub Pages and Linux-installer workflows.
+- Verified on the CachyOS desktop (KDE Plasma, i5-8500, GTX 1660 SUPER), with a
+  clean graphical install, a terminal install, the installed game launching
+  from the new tree, and uninstall.
+
 ## 2026-10-16 — Renamed to SuperTux Remastered
 
 - The repo is now **`supertux-remastered`** ("SuperTux Remastered"), an

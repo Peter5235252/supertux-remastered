@@ -33,6 +33,25 @@
 > original SuperTux textures only, and the upscaling pipeline and its release
 > assets are gone from this repo.
 
+## Website and graphical installer
+
+The project landing page lives in [`website/`](website/) — a React + Vite site
+with real in-game screenshots captured from the rolling Linux build. It includes
+a native Linux GUI installer (`installer/`, Rust + egui) that downloads the
+test build, verifies the GitHub SHA-256 digest, unpacks it and adds a desktop
+shortcut. No terminal needed; `--cli` keeps the scriptable path for advanced
+users.
+
+```sh
+# website
+cd website && npm install && npm run dev
+
+# Linux installer
+cd installer && cargo build --release
+```
+
+The command-line instructions below are still fully supported.
+
 ## Download and play (test builds)
 
 Rolling builds from `main`, published as
