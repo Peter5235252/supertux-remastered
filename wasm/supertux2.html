@@ -95,6 +95,7 @@
 </head>
 <body>
   <canvas id="canvas"></canvas>
+  <input id="file-upload" type="file" multiple hidden />
 
   <div id="loading">
     <div class="spinner"></div>
@@ -175,10 +176,17 @@
 
     let DATA_BLOB_URL = null;
 
-    // Browser persistence bridge used by Config::load() and Config::save().
-    // The upstream Emscripten template provides this API; keep it available
-    // when using the custom WebGPU shell as well.
+    // Browser APIs normally supplied by mk/emscripten/template.html.in.
+    // The custom shell must provide the same hooks used by the C++ Emscripten build.
     const SUPERTUX_USER_DATA_ROOT = '/home/web_user/.local/share/supertux2/';
+    let saving = false;
+    let firstFramePresented = false;
+    let setResolution = null;
+    let autofit = true;
+    let onDownloadProgress = null;
+    let onDownloadFinished = null;
+    let onDownloadError = null;
+    let onDownloadAborted = null;
 
     window.supertux_loadFiles = function() {
       try {
@@ -191,19 +199,34 @@
       }
     };
 
-    window.supertux_saveFiles = function() {
+    window.supertux2_syncfs = function() {
+      if (saving) return;
+      saving = true;
       try {
         FS.syncfs((error) => {
-          if (error) {
-            console.warn('[superTux] Could not sync browser storage:', error);
-          }
+          if (error) console.warn('[superTux] IndexedDB sync failed:', error);
+          saving = false;
         });
       } catch (error) {
-        console.warn('[superTux] Could not start browser storage sync:', error);
+        saving = false;
+        console.warn('[superTux] Could not start IndexedDB sync:', error);
       }
 
-      // localStorage is synchronous, so preserve the config even when the
-      // browser closes before IndexedDB finishes its asynchronous sync.
+      // ScreenManager calls this after each rendered frame. Keep the loading
+      // overlay visible until the first frame has actually reached the renderer.
+      if (!firstFramePresented) {
+        firstFramePresented = true;
+        requestAnimationFrame(() => {
+          document.getElementById('loading')?.classList.add('hidden');
+        });
+      }
+    };
+
+    window.supertux_saveFiles = function() {
+      window.supertux2_syncfs();
+
+      // localStorage is synchronous, so preserve config if the browser closes
+      // before IndexedDB finishes its asynchronous sync.
       try {
         const config = FS.readFile(SUPERTUX_USER_DATA_ROOT + 'config', {
           encoding: 'utf8'
@@ -213,6 +236,135 @@
         console.warn('[superTux] Could not save browser config:', error);
       }
     };
+
+    window.supertux_download = function(path) {
+      try {
+        const stat = FS.stat(path);
+        const file = FS.open(path, 'r');
+        const data = new Uint8Array(stat.size);
+        FS.read(file, data, 0, stat.size, 0);
+        FS.close(file);
+
+        const blobUrl = URL.createObjectURL(new Blob([data], {
+          type: 'application/octet-stream'
+        }));
+        const anchor = document.createElement('a');
+        anchor.href = blobUrl;
+        anchor.download = path.slice(path.lastIndexOf('/') + 1);
+        anchor.style.display = 'none';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        return true;
+      } catch (error) {
+        console.error('[superTux] File download failed:', error);
+        return false;
+      }
+    };
+
+    const fileUpload = document.getElementById('file-upload');
+    let uploadBasePath = '';
+    window.supertux_upload = function(base) {
+      uploadBasePath = String(base || '')
+        .replace(/^\/+/, '')
+        .replace(/\.\.(?:\/|$)/g, '')
+        .replace(/\/+/g, '/');
+      if (uploadBasePath && !uploadBasePath.endsWith('/')) {
+        uploadBasePath += '/';
+      }
+      fileUpload.click();
+    };
+
+    fileUpload.addEventListener('change', async () => {
+      try {
+        for (const file of fileUpload.files) {
+          const destination = SUPERTUX_USER_DATA_ROOT + uploadBasePath + file.name;
+          const directory = destination.slice(0, destination.lastIndexOf('/'));
+          FS.mkdirTree(directory);
+          FS.writeFile(destination, new Uint8Array(await file.arrayBuffer()));
+        }
+        window.supertux2_syncfs();
+      } catch (error) {
+        console.error('[superTux] File upload failed:', error);
+      } finally {
+        fileUpload.value = '';
+      }
+    });
+
+    window.supertux_xhr_file_download = function(ptr, id, url, file) {
+      if (!onDownloadProgress || !onDownloadFinished || !onDownloadError || !onDownloadAborted) {
+        console.error('[superTux] Downloader callbacks are not initialized');
+        return;
+      }
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', url);
+      xhr.responseType = 'arraybuffer';
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300) {
+          onDownloadError(ptr, id);
+          return;
+        }
+        try {
+          const directory = file.slice(0, file.lastIndexOf('/'));
+          if (directory) FS.mkdirTree(directory);
+          FS.writeFile(file, new Uint8Array(xhr.response));
+          onDownloadFinished(ptr, id, '');
+          window.supertux2_syncfs();
+        } catch (error) {
+          console.error('[superTux] Download file write failed:', error);
+          onDownloadError(ptr, id);
+        }
+      };
+      xhr.addEventListener('progress', event => {
+        onDownloadProgress(ptr, id, event.loaded, event.total);
+      });
+      xhr.addEventListener('error', () => onDownloadError(ptr, id));
+      xhr.addEventListener('abort', () => onDownloadAborted(ptr, id));
+      xhr.send();
+    };
+
+    window.supertux_xhr_string_download = function(ptr, id, url) {
+      if (!onDownloadProgress || !onDownloadFinished || !onDownloadError || !onDownloadAborted) {
+        console.error('[superTux] Downloader callbacks are not initialized');
+        return;
+      }
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', url);
+      xhr.responseType = 'text';
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300) {
+          onDownloadError(ptr, id);
+          return;
+        }
+        onDownloadFinished(ptr, id, xhr.responseText);
+      };
+      xhr.addEventListener('progress', event => {
+        onDownloadProgress(ptr, id, event.loaded, event.total);
+      });
+      xhr.addEventListener('error', () => onDownloadError(ptr, id));
+      xhr.addEventListener('abort', () => onDownloadAborted(ptr, id));
+      xhr.send();
+    };
+
+    function tryResize() {
+      if (!autofit || !setResolution) return;
+      try {
+        setResolution(window.innerWidth, window.innerHeight);
+      } catch (error) {
+        console.warn('[superTux] Resize failed:', error);
+      }
+    }
+
+    window.supertux_setAutofit = function(enabled) {
+      autofit = Boolean(enabled);
+      document.body.style.overflow = autofit ? 'hidden' : 'auto';
+      tryResize();
+    };
+
+    window.addEventListener('resize', tryResize);
 
     function showError(title, error) {
       console.error('[superTux] ' + title + ':', error);
@@ -231,17 +383,37 @@
       noInitialRun: false,
       noExitRuntime: true,
 
-      locateFile: (path, prefix) => {
+      locateFile: (path) => {
         if (path.endsWith('.data')) {
           return DATA_BLOB_URL;
         }
-        return prefix + path;
+
+        // Resolve runtime assets beside this HTTPS page, never against a
+        // build-machine file:/// URL embedded in Emscripten's script prefix.
+        const assetPath = /^file:\/\//i.test(path)
+          ? path.slice(path.lastIndexOf('/') + 1)
+          : path;
+        const resolved = new URL(assetPath, new URL('./', window.location.href));
+        if (resolved.protocol !== 'https:' && resolved.protocol !== 'http:') {
+          throw new Error('Blocked non-web runtime asset URL: ' + resolved.href);
+        }
+        return resolved.href;
       },
 
       onRuntimeInitialized: () => {
         console.log('[superTux] Runtime initialized');
-        // Hide loading screen
-        document.getElementById('loading').classList.add('hidden');
+        try {
+          setResolution = Module.cwrap('set_resolution', 'void', ['number', 'number']);
+          onDownloadProgress = Module.cwrap('onDownloadProgress', 'void',
+            ['number', 'number', 'number', 'number']);
+          onDownloadFinished = Module.cwrap('onDownloadFinished', 'void',
+            ['number', 'number', 'string']);
+          onDownloadError = Module.cwrap('onDownloadError', 'void', ['number', 'number']);
+          onDownloadAborted = Module.cwrap('onDownloadAborted', 'void', ['number', 'number']);
+          tryResize();
+        } catch (error) {
+          showError('Emscripten callback initialization failed', error);
+        }
       },
 
       setStatus: (status) => {
@@ -268,7 +440,7 @@
 
     // Expose supertux_onready for the C++ EM_ASM callback.
     window.supertux_onready = () => {
-      document.getElementById('loading').classList.add('hidden');
+      console.log('[superTux] C++ entry point reached');
       if (Module.onReady) Module.onReady();
     };
 
@@ -335,15 +507,8 @@
       });
     }
 
-    // Track if the game actually started
-    let gameStarted = false;
-    const originalOnReady = window.supertux_onready;
-    window.supertux_onready = () => {
-      console.log('[superTux] supertux_onready called — game starting');
-      gameStarted = true;
-      document.getElementById('loading').classList.add('hidden');
-      if (Module.onReady) Module.onReady();
-    };
+    // C++ calls supertux_onready before initialization; the first-frame
+    // callback in supertux2_syncfs controls when the loading overlay disappears.
 
     init().then(() => {
       console.log('[superTux] Init complete, waiting for game to start');
