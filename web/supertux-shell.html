@@ -217,9 +217,9 @@
       // first safe point to resize: video, GPU and menu systems are initialized.
       if (!firstFramePresented) {
         firstFramePresented = true;
-        canResize = true;
-        tryResize();
         requestAnimationFrame(() => {
+          canResize = true;
+          tryResize();
           document.getElementById('loading')?.classList.add('hidden');
         });
       }
