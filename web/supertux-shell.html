@@ -150,6 +150,12 @@
         return prefix + path;
       },
 
+      onRuntimeInitialized: () => {
+        console.log('[superTux] Runtime initialized');
+        // Hide loading screen
+        document.getElementById('loading').classList.add('hidden');
+      },
+
       onReady: null,
 
       onAbort: (what) => {
@@ -169,6 +175,16 @@
       document.getElementById('loading').classList.add('hidden');
       if (Module.onReady) Module.onReady();
     };
+
+    // Fallback: hide loading screen after 15 seconds even if supertux_onready
+    // is never called (e.g., if the C++ init path doesn't fire it).
+    setTimeout(() => {
+      const loading = document.getElementById('loading');
+      if (loading && !loading.classList.contains('hidden')) {
+        console.warn('[superTux] supertux_onready not called after 15s — hiding loading screen anyway');
+        loading.classList.add('hidden');
+      }
+    }, 15000);
 
     async function preloadShaders() {
       for (let i = 0; i < SHADERS.length; i++) {
