@@ -183,6 +183,7 @@
     let firstFramePresented = false;
     let setResolution = null;
     let autofit = true;
+    let canResize = false;
     let onDownloadProgress = null;
     let onDownloadFinished = null;
     let onDownloadError = null;
@@ -350,7 +351,7 @@
     };
 
     function tryResize() {
-      if (!autofit || !setResolution) return;
+      if (!canResize || !autofit || !setResolution) return;
       try {
         setResolution(window.innerWidth, window.innerHeight);
       } catch (error) {
@@ -410,7 +411,6 @@
             ['number', 'number', 'string']);
           onDownloadError = Module.cwrap('onDownloadError', 'void', ['number', 'number']);
           onDownloadAborted = Module.cwrap('onDownloadAborted', 'void', ['number', 'number']);
-          tryResize();
         } catch (error) {
           showError('Emscripten callback initialization failed', error);
         }
@@ -442,6 +442,13 @@
     window.supertux_onready = () => {
       console.log('[superTux] C++ entry point reached');
       if (Module.onReady) Module.onReady();
+
+      // init_emscripten() runs near the start of main(), before VideoSystem
+      // exists. Wait until the browser regains control after C++ startup.
+      window.requestAnimationFrame(() => {
+        canResize = true;
+        tryResize();
+      });
     };
 
     // Global error handler for uncaught exceptions
