@@ -18,7 +18,7 @@ struct RcasUBO {
 @fragment
 fn main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   // Fragment position is in framebuffer pixels; normalize by source size.
-  let source_size = vec2<f32>(textureDimensions(src_tex));
+  let source_size = vec2<f32>(textureDimensions(src_tex, 0));
   let uv = position.xy / source_size;
   return textureSample(src_tex, src_sampler, uv);
 }
