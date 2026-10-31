@@ -17,10 +17,10 @@
 
 name: WebAssembly
 
-# Serialize workflow runs so concurrent matrix builds cannot race while pushing gh-pages.
+# Keep only the newest deployment build for each ref.
 concurrency:
-  group: wasm-pages-${{ github.repository }}
-  cancel-in-progress: false
+  group: wasm-pages-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   workflow_dispatch:
