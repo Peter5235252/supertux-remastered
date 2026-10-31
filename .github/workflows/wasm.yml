@@ -49,12 +49,7 @@ jobs:
         with:
           # Fetch the whole tree so git describe works
           fetch-depth: 0
-          submodules: true
-
-      # Only XDL_wgpu's SDL source submodule is needed; its optional image,
-      # mixer and TTF submodules are not used by this build.
-      - name: Initialize XDL_wgpu SDL source
-        run: git -C external/XDL_wgpu submodule update --init external/SDL
+          submodules: recursive
 
       - name: Install emscripten tools
         run: |
