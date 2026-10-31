@@ -183,6 +183,7 @@
     let firstFramePresented = false;
     let setResolution = null;
     let autofit = true;
+    let canResize = false;
     let onDownloadProgress = null;
     let onDownloadFinished = null;
     let onDownloadError = null;
@@ -212,11 +213,13 @@
         console.warn('[superTux] Could not start IndexedDB sync:', error);
       }
 
-      // ScreenManager calls this after each rendered frame. Keep the loading
-      // overlay visible until the first frame has actually reached the renderer.
+      // ScreenManager calls this after each rendered frame. This is the
+      // first safe point to resize: video, GPU and menu systems are initialized.
       if (!firstFramePresented) {
         firstFramePresented = true;
         requestAnimationFrame(() => {
+          canResize = true;
+          tryResize();
           document.getElementById('loading')?.classList.add('hidden');
         });
       }
@@ -350,7 +353,7 @@
     };
 
     function tryResize() {
-      if (!autofit || !setResolution) return;
+      if (!canResize || !autofit || !setResolution) return;
       try {
         setResolution(window.innerWidth, window.innerHeight);
       } catch (error) {
@@ -410,7 +413,6 @@
             ['number', 'number', 'string']);
           onDownloadError = Module.cwrap('onDownloadError', 'void', ['number', 'number']);
           onDownloadAborted = Module.cwrap('onDownloadAborted', 'void', ['number', 'number']);
-          tryResize();
         } catch (error) {
           showError('Emscripten callback initialization failed', error);
         }
