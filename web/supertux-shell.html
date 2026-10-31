@@ -213,10 +213,12 @@
         console.warn('[superTux] Could not start IndexedDB sync:', error);
       }
 
-      // ScreenManager calls this after each rendered frame. Keep the loading
-      // overlay visible until the first frame has actually reached the renderer.
+      // ScreenManager calls this after each rendered frame. This is the
+      // first safe point to resize: video, GPU and menu systems are initialized.
       if (!firstFramePresented) {
         firstFramePresented = true;
+        canResize = true;
+        tryResize();
         requestAnimationFrame(() => {
           document.getElementById('loading')?.classList.add('hidden');
         });
@@ -442,13 +444,6 @@
     window.supertux_onready = () => {
       console.log('[superTux] C++ entry point reached');
       if (Module.onReady) Module.onReady();
-
-      // init_emscripten() runs near the start of main(), before VideoSystem
-      // exists. Wait until the browser regains control after C++ startup.
-      window.requestAnimationFrame(() => {
-        canResize = true;
-        tryResize();
-      });
     };
 
     // Global error handler for uncaught exceptions
