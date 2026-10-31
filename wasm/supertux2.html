@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#050b13" />
+  <title>SuperTux Remastered — WebGPU / WASM</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #050b13;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #canvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+    #loading {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #050b13;
+      color: #e8f4ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: opacity 0.4s ease;
+    }
+    #loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #1e3a5f;
+      border-top: 4px solid #38bdf8;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 { margin: 0 0 8px 0; font-size: 1.5rem; letter-spacing: 0.05em; }
+    p { margin: 0 0 16px 0; opacity: 0.8; font-size: 0.95rem; }
+    .progress {
+      width: 320px;
+      height: 6px;
+      background: #1e3a5f;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: #38bdf8;
+      transition: width 0.2s ease;
+    }
+    .progress-text {
+      font-size: 0.85rem;
+      opacity: 0.7;
+    }
+    #error {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #5b1a1a;
+      color: #ffd6d6;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 20;
+      text-align: center;
+    }
+    #error h2 { margin-top: 0; }
+    #error button {
+      margin-top: 16px;
+      padding: 10px 20px;
+      background: #38bdf8;
+      color: #050b13;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #error button:hover { background: #7dd3fc; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <h1>SuperTux Remastered</h1>
+    <p id="loading-text">Preparing WebGPU shaders…</p>
+    <div class="progress">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <p class="progress-text" id="progress-text">0%</p>
+  </div>
+
+  <div id="error">
+    <h2>WebGPU not available</h2>
+    <p id="error-msg"></p>
+    <p>Try a browser with WebGPU support (Chrome/Edge 113+, Firefox with flag).</p>
+    <button onclick="location.reload()">Retry</button>
+  </div>
+
+  <script type="module">
+    // List of WGSL shaders that SDL_GPU compiles at startup.
+    // Pre-fetching them here ensures they are compiled/cached before
+    // the game loop starts, for a smoother first frame.
+    const SHADERS = [
+      'shader/gpu_textured.vert.wgsl',
+      'shader/gpu_textured.frag.wgsl',
+      'shader/gpu_fullscreen.vert.wgsl',
+      'shader/gpu_fsr_easu.frag.wgsl',
+      'shader/gpu_fsr_rcas.frag.wgsl',
+    ];
+
+    function setProgress(pct, label) {
+      document.getElementById('progress-bar').style.width = pct + '%';
+      document.getElementById('progress-text').textContent = pct + '%';
+      const el = document.getElementById('loading-text');
+      if (label) el.textContent = label;
+    }
+
+    // Configure the emscripten Module before the glue script runs.
+    // Override locateFile to fetch the large .data file from GitHub Releases
+    // (it exceeds GitHub Pages' 100MB file size limit).
+    const DATA_URL = 'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/supertux2.data';
+
+    const Module = {
+      canvas: document.getElementById('canvas'),
+      print: (text) => { console.log('[superTux]', text); },
+      printErr: (text) => { console.warn('[superTux]', text); },
+      noInitialRun: true,
+      noExitRuntime: true,
+
+      locateFile: (path, prefix) => {
+        if (path.endsWith('.data')) {
+          return DATA_URL;
+        }
+        return prefix + path;
+      },
+
+      onReady: null,
+
+      onAbort: (what) => {
+        document.getElementById('loading').classList.add('hidden');
+        const err = document.getElementById('error');
+        err.style.display = 'flex';
+        document.getElementById('error-title').textContent = 'Load error';
+        document.getElementById('error-msg').textContent = String(what);
+      },
+    };
+
+    // Expose supertux_onready for the C++ EM_ASM callback.
+    window.supertux_onready = () => {
+      document.getElementById('loading').classList.add('hidden');
+      if (Module.onReady) Module.onReady();
+    };
+
+    async function preloadShaders() {
+      for (let i = 0; i < SHADERS.length; i++) {
+        const pct = Math.round(((i + 1) / SHADERS.length) * 100);
+        setProgress(pct, `Compiling shader ${i + 1} / ${SHADERS.length}…`);
+        try {
+          const resp = await fetch(SHADERS[i]);
+          if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status} for ${SHADERS[i]}`);
+          }
+          await resp.text();
+        } catch (e) {
+          console.warn('[superTux] Shader preload skipped:', e.message);
+        }
+      }
+      setProgress(100, 'Shaders ready. Starting game…');
+    }
+
+    async function init() {
+      // Phase 1: Pre-load + compile WebGPU shaders for stability
+      await preloadShaders();
+
+      // Small delay so the user sees "100%" before the game takes over
+      await new Promise(r => setTimeout(r, 300));
+
+      // Phase 2: Load the emscripten glue script (supertux2.js is built by CI
+      // and placed next to this shell). The C++ main() runs via
+      // emscripten_set_main_loop in ScreenManager::run().
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'supertux2.js';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Failed to load supertux2.js'));
+        document.head.appendChild(script);
+      });
+    }
+
+    init().then(() => {
+      // Emscripten is loaded; the game starts itself via ScreenManager::run()
+      // which calls emscripten_set_main_loop on WASM.
+    }).catch((err) => {
+      document.getElementById('loading').classList.add('hidden');
+      const errEl = document.getElementById('error');
+      errEl.style.display = 'flex';
+      document.getElementById('error-title').textContent = 'Load error';
+      document.getElementById('error-msg').textContent = err.message;
+    });
+  </script>
+</body>
+</html>
