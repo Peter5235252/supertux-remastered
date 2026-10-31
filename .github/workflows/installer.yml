@@ -1,0 +1,43 @@
+name: Linux installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'installer/**'
+      - '.github/workflows/installer.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: installer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config libx11-dev libxcb1-dev libxcursor-dev libxrandr-dev libxi-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
+            libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev
+      - name: Build
+        run: cargo build --release
+      - name: Package
+        run: |
+          mkdir -p ../out
+          cp target/release/supertux-remastered-setup ../out/
+          cd ../out
+          sha256sum supertux-remastered-setup > SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: supertux-remastered-setup-linux-x86_64
+          path: out/
+          retention-days: 30
