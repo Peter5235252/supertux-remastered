@@ -16,3 +16,7 @@
 [submodule "external/shared-modules"]
 	path = external/shared-modules
 	url = https://github.com/flathub/shared-modules
+
+[submodule "external/XDL_wgpu"]
+	path = external/XDL_wgpu
+	url = https://github.com/stanoddly/XDL_wgpu.git
