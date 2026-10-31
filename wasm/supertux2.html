@@ -175,6 +175,45 @@
 
     let DATA_BLOB_URL = null;
 
+    // Browser persistence bridge used by Config::load() and Config::save().
+    // The upstream Emscripten template provides this API; keep it available
+    // when using the custom WebGPU shell as well.
+    const SUPERTUX_USER_DATA_ROOT = '/home/web_user/.local/share/supertux2/';
+
+    window.supertux_loadFiles = function() {
+      try {
+        const savedConfig = localStorage.getItem('supertux2_config');
+        if (savedConfig !== null) {
+          FS.writeFile(SUPERTUX_USER_DATA_ROOT + 'config', savedConfig);
+        }
+      } catch (error) {
+        console.warn('[superTux] Could not restore browser config:', error);
+      }
+    };
+
+    window.supertux_saveFiles = function() {
+      try {
+        FS.syncfs((error) => {
+          if (error) {
+            console.warn('[superTux] Could not sync browser storage:', error);
+          }
+        });
+      } catch (error) {
+        console.warn('[superTux] Could not start browser storage sync:', error);
+      }
+
+      // localStorage is synchronous, so preserve the config even when the
+      // browser closes before IndexedDB finishes its asynchronous sync.
+      try {
+        const config = FS.readFile(SUPERTUX_USER_DATA_ROOT + 'config', {
+          encoding: 'utf8'
+        });
+        localStorage.setItem('supertux2_config', config);
+      } catch (error) {
+        console.warn('[superTux] Could not save browser config:', error);
+      }
+    };
+
     function showError(title, error) {
       console.error('[superTux] ' + title + ':', error);
       document.getElementById('loading').classList.add('hidden');
@@ -241,6 +280,15 @@
 
     window.addEventListener('unhandledrejection', (event) => {
       showError('Unhandled startup rejection', event.reason);
+    });
+
+    window.addEventListener('pagehide', () => {
+      try {
+        Module.ccall('save_config', 'void', [], []);
+      } catch (error) {
+        console.warn('[superTux] Could not save config on exit:', error);
+      }
+      window.supertux_saveFiles();
     });
 
     async function preloadShaders() {
