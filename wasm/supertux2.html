@@ -138,28 +138,42 @@
     async function fetchDataBlob() {
       const chunks = [];
       let i = 0;
+
       while (true) {
         const suffix = String.fromCharCode(97 + Math.floor(i / 26)) + String.fromCharCode(97 + (i % 26));
-        const url = `wasm/supertux2.data.part${suffix}`;
-        try {
-          const resp = await fetch(url);
-          if (!resp.ok) break;
-          const blob = await resp.blob();
-          chunks.push(blob);
-          console.log(`[superTux] Fetched chunk ${suffix} (${blob.size} bytes)`);
-          i++;
-        } catch (e) {
-          break;
+        const url = new URL(`supertux2.data.part${suffix}`, document.baseURI);
+        setProgress(100, `Downloading game data — chunk ${suffix.toUpperCase()}…`);
+
+        // Only 404 means the chunk sequence has ended. Network failures and
+        // server errors must fail visibly instead of silently accepting a
+        // truncated data archive.
+        const resp = await fetch(url);
+        if (resp.status === 404) break;
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status} while downloading ${url.pathname}`);
         }
+
+        const blob = await resp.blob();
+        if (blob.size === 0) {
+          throw new Error(`Empty game data chunk: ${url.pathname}`);
+        }
+
+        chunks.push(blob);
+        console.log(`[superTux] Fetched chunk ${suffix.toUpperCase()} (${blob.size} bytes)`);
+        i++;
       }
-      if (chunks.length === 0) throw new Error('No data chunks found');
+
+      if (chunks.length === 0) {
+        throw new Error('No game data chunks found. Check the WebAssembly deployment.');
+      }
+
       const fullBlob = new Blob(chunks, { type: 'application/octet-stream' });
       const blobUrl = URL.createObjectURL(fullBlob);
       console.log(`[superTux] Reassembled .data: ${fullBlob.size} bytes from ${chunks.length} chunks`);
       return blobUrl;
     }
 
-    const DATA_BLOB_URL = await fetchDataBlob();
+    let DATA_BLOB_URL = null;
 
     window.Module = {
       canvas: document.getElementById('canvas'),
@@ -251,10 +265,15 @@
     }
 
     async function init() {
-      // Phase 1: Pre-load + compile WebGPU shaders for stability
+      // Phase 1: Pre-load the WGSL shader assets.
       await preloadShaders();
 
-      // Small delay so the user sees "100%" before the game takes over
+      // Phase 2: Download and reassemble the same-origin data chunks.
+      // Keep this inside init() so failures are handled by the visible catch
+      // handler below rather than an unhandled top-level module rejection.
+      DATA_BLOB_URL = await fetchDataBlob();
+
+      // Small delay so the user sees the completed preparation state.
       await new Promise(r => setTimeout(r, 300));
 
       // Phase 2: Load the emscripten glue script (supertux2.js is built by CI
