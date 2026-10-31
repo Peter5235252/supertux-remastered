@@ -137,19 +137,24 @@
     // Must be on global scope (window) so supertux2.js can find it.
 
     async function fetchDataBlob() {
-      const chunks = [];
-      let i = 0;
+      const manifestUrl = new URL('supertux2.data.parts', document.baseURI);
+      const manifestResponse = await fetch(manifestUrl);
+      if (!manifestResponse.ok) {
+        throw new Error(`HTTP ${manifestResponse.status} while downloading game-data manifest`);
+      }
 
-      while (true) {
+      const chunkCount = Number((await manifestResponse.text()).trim());
+      if (!Number.isSafeInteger(chunkCount) || chunkCount < 1 || chunkCount > 100) {
+        throw new Error('Invalid game-data chunk count in deployment manifest.');
+      }
+
+      const chunks = [];
+      for (let i = 0; i < chunkCount; i++) {
         const suffix = String.fromCharCode(97 + Math.floor(i / 26)) + String.fromCharCode(97 + (i % 26));
         const url = new URL(`supertux2.data.part${suffix}`, document.baseURI);
         setProgress(100, `Downloading game data — chunk ${suffix.toUpperCase()}…`);
 
-        // Only 404 means the chunk sequence has ended. Network failures and
-        // server errors must fail visibly instead of silently accepting a
-        // truncated data archive.
         const resp = await fetch(url);
-        if (resp.status === 404) break;
         if (!resp.ok) {
           throw new Error(`HTTP ${resp.status} while downloading ${url.pathname}`);
         }
@@ -161,11 +166,6 @@
 
         chunks.push(blob);
         console.log(`[superTux] Fetched chunk ${suffix.toUpperCase()} (${blob.size} bytes)`);
-        i++;
-      }
-
-      if (chunks.length === 0) {
-        throw new Error('No game data chunks found. Check the WebAssembly deployment.');
       }
 
       const fullBlob = new Blob(chunks, { type: 'application/octet-stream' });
