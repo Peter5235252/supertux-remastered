@@ -13,7 +13,7 @@
     },
     {
       "name": "sdl3-ttf",
-      "features": ["harfbuzz"]
+      "features": []
     },
     "glm",
     "libpng",
