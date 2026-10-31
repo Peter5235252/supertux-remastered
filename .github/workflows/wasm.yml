@@ -17,6 +17,11 @@
 
 name: WebAssembly
 
+# Serialize workflow runs so concurrent matrix builds cannot race while pushing gh-pages.
+concurrency:
+  group: wasm-pages-${{ github.repository }}
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
   push:
