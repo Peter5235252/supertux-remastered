@@ -213,6 +213,11 @@ if(NOT EMSCRIPTEN)
     PKG Vorbis PKG_USE Vorbis::vorbisfile CONFIG REQUIRED PKG_CONFIG vorbisfile)
 else()
   include(SuperTux/Emscripten)
+
+  # Stock Emscripten SDL3 has no SDL_GPU WebGPU backend. XDL_wgpu provides
+  # the SDL_GPU implementation on top of emdawnwebgpu.
+  set(XDL_BUILD_TEST OFF CACHE BOOL "" FORCE)
+  add_subdirectory(external/XDL_wgpu EXCLUDE_FROM_ALL)
 endif()
 
 # TODO: SDL3
@@ -401,6 +406,13 @@ target_link_libraries(supertux2 PUBLIC
   tinygettext sexp SDL_SavePNG SDL3_ttf
   PartioZip OpenAL FindLocale obstack glm fmt PhysFS)
 target_compile_definitions(supertux2 PUBLIC GLM_ENABLE_EXPERIMENTAL)
+if(EMSCRIPTEN)
+  # This archive must precede Emscripten's stock SDL3 archive: its SDL_GPU
+  # definitions replace SDL's empty browser backend.
+  target_link_libraries(supertux2 PUBLIC XDL_wgpu)
+  # WebGPU adapter/device acquisition is asynchronous and requires Asyncify.
+  target_link_options(supertux2 PUBLIC -sASYNCIFY)
+endif()
 if(NOT EMSCRIPTEN)
   target_link_libraries(supertux2 PUBLIC
     # SDL3_image
