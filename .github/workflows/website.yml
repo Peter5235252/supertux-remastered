@@ -14,8 +14,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: wasm-pages-${"${{ github.repository }}"}
+  cancel-in-progress: false
 
 jobs:
   build:
