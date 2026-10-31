@@ -603,9 +603,8 @@ Main::launch_game(const CommandLineArguments& args)
 
   m_video_system = VideoSystem::create(video);
 #else
-  // WebAssembly keeps the null renderer; the Vulkan backend does not
-  // target browsers (Emscripten port pending a WebGPU backend).
-  m_video_system = VideoSystem::create(VideoSystem::VIDEO_NULL);
+  // WebAssembly uses the WebGPU renderer via SDL_GPU.
+  m_video_system = VideoSystem::create(VideoSystem::VIDEO_GPU);
 #endif
   init_video();
 
