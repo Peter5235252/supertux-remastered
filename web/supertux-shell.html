@@ -181,6 +181,18 @@
         document.getElementById('loading').classList.add('hidden');
       },
 
+      setStatus: (status) => {
+        const match = status.match(/\((\d+)\/(\d+)\)/);
+        if (match) {
+          const loaded = Number(match[1]);
+          const total = Number(match[2]);
+          const pct = Math.round((loaded / total) * 100);
+          setProgress(pct, `Downloading game data… ${pct}%`);
+        } else {
+          document.getElementById('loading-text').textContent = status;
+        }
+      },
+
       onReady: null,
 
       onAbort: (what) => {
