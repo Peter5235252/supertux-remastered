@@ -407,11 +407,16 @@ target_link_libraries(supertux2 PUBLIC
   PartioZip OpenAL FindLocale obstack glm fmt PhysFS)
 target_compile_definitions(supertux2 PUBLIC GLM_ENABLE_EXPERIMENTAL)
 if(EMSCRIPTEN)
-  # This archive must precede Emscripten's stock SDL3 archive: its SDL_GPU
-  # definitions replace SDL's empty browser backend.
-  target_link_libraries(supertux2 PUBLIC XDL_wgpu)
+  # XDL_wgpu must be first so its SDL_GPU symbols are selected before the
+  # stock SDL3 port's empty GPU backend.
+  target_link_libraries(supertux2 BEFORE PUBLIC XDL_wgpu)
   # WebGPU adapter/device acquisition is asynchronous and requires Asyncify.
-  target_link_options(supertux2 PUBLIC -sASYNCIFY)
+  # Keep a map so CI can verify which SDL_GPU implementation the linker chose.
+  target_link_options(supertux2 PUBLIC
+    -sASYNCIFY
+    -Wl,--trace-symbol=SDL_CreateGPUDevice
+    -Wl,-Map=${CMAKE_BINARY_DIR}/supertux2.map
+  )
 endif()
 if(NOT EMSCRIPTEN)
   target_link_libraries(supertux2 PUBLIC
