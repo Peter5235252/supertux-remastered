@@ -24,21 +24,24 @@ struct FragBlock {
 @group(3) @binding(4) var framebuffer_texture: texture_2d<f32>;
 @group(3) @binding(5) var framebuffer_sampler: sampler;
 
-@location(0) var<in> var_uv: vec2<f32>;
-@location(1) var<in> var_color: vec4<f32>;
-
-@location(0) var<out> frag_color: vec4<f32>;
+struct FragmentInput {
+  @builtin(position) position: vec4<f32>,
+  @location(0) var_uv: vec2<f32>,
+  @location(1) var_color: vec4<f32>,
+};
 
 @fragment
-fn main() -> @location(0) vec4<f32> {
+fn main(input: FragmentInput) -> @location(0) vec4<f32> {
   let fb = frag_block.backbuffer;
   let is_disp = frag_block.is_displacement;
   let blur = frag_block.blur;
+  // Preserve GLSL gl_FragCoord.xyw for the fragcoord2uv transform.
+  let frag_position = vec3<f32>(input.position.x, input.position.y, input.position.w);
 
   if (fb == 0.0 || is_disp == 0 || blur != 0) {
-    var color = var_color * textureSample(diffuse_texture, diffuse_sampler, var_uv.st + frag_block.animate * frag_block.game_time);
+    let color = input.var_color * textureSample(diffuse_texture, diffuse_sampler, input.var_uv + frag_block.animate * frag_block.game_time);
     if (blur != 0) {
-      let uv = (frag_block.fragcoord2uv * vec3<f32>(@builtin(position), 1.0)).xy;
+      let uv = (frag_block.fragcoord2uv * frag_position).xy;
       // Note: WebGPU fragment position is in the same space; uv.y flip applied below.
       let flipped_uv = vec2<f32>(uv.x, 1.0 - uv.y);
       let texel = vec2<f32>(frag_block.fragcoord2uv[0][0], frag_block.fragcoord2uv[1][1]);
@@ -56,22 +59,20 @@ fn main() -> @location(0) vec4<f32> {
         y = y + 1.0;
       }
       let blurred = sum / num;
-      frag_color = vec4<f32>(mix(color.rgb, blurred.rgb * 1.05, color.a), 1.0);
+      return vec4<f32>(mix(color.rgb, blurred.rgb * 1.05, color.a), 1.0);
     } else {
-      frag_color = color;
+      return color;
     }
   } else {
-    let pixel = textureSample(displacement_texture, displacement_sampler, var_uv.st + frag_block.displacement_animate * frag_block.game_time);
+    let pixel = textureSample(displacement_texture, displacement_sampler, input.var_uv + frag_block.displacement_animate * frag_block.game_time);
     let displacement = (pixel.rg - vec2<f32>(0.5, 0.5)) * 255.0;
     let alpha = pixel.a;
 
-    let pos = vec3<f32>(@builtin(position), 1.0);
-    let uv = (frag_block.fragcoord2uv * (pos + vec3<f32>(displacement.xy * alpha, 0.0))).xy;
+    let uv = (frag_block.fragcoord2uv * (frag_position + vec3<f32>(displacement.xy * alpha, 0.0))).xy;
     let flipped_uv = vec2<f32>(uv.x, 1.0 - uv.y);
     let back_color = textureSample(framebuffer_texture, framebuffer_sampler, flipped_uv);
 
-    let color = var_color * textureSample(diffuse_texture, diffuse_sampler, var_uv.st + frag_block.animate * frag_block.game_time);
-    frag_color = vec4<f32>(mix(color.rgb, back_color.rgb, alpha), color.a);
+    let color = input.var_color * textureSample(diffuse_texture, diffuse_sampler, input.var_uv + frag_block.animate * frag_block.game_time);
+    return vec4<f32>(mix(color.rgb, back_color.rgb, alpha), color.a);
   }
-  return frag_color;
 }
