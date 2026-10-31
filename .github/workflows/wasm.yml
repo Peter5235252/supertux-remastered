@@ -156,7 +156,7 @@ jobs:
           # Split the Emscripten data package into same-origin 50 MB chunks.
           test -f build/upload/supertux2.data
           split -b 50M -a 2 build/upload/supertux2.data publish/wasm/supertux2.data.part
-          chunk_count=$(find publish/wasm -maxdepth 1 -type f -name 'supertux2.data.part*' | wc -l)
+          chunk_count=$(find publish/wasm -maxdepth 1 -type f -name 'supertux2.data.part??' | wc -l)
           printf '%s\n' "$chunk_count" > publish/wasm/supertux2.data.parts
           echo "=== Published game-data chunks ($chunk_count) ==="
           ls -lh publish/wasm/supertux2.data.part*
