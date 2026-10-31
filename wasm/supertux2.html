@@ -134,32 +134,7 @@
 
     // Configure the emscripten Module before the glue script runs.
     // Must be on global scope (window) so supertux2.js can find it.
-
-    async function fetchDataBlob() {
-      const chunks = [];
-      let i = 0;
-      while (true) {
-        const suffix = String.fromCharCode(97 + Math.floor(i / 26)) + String.fromCharCode(97 + (i % 26));
-        const url = `wasm/supertux2.data.part${suffix}`;
-        try {
-          const resp = await fetch(url);
-          if (!resp.ok) break;
-          const blob = await resp.blob();
-          chunks.push(blob);
-          console.log(`[superTux] Fetched chunk ${suffix} (${blob.size} bytes)`);
-          i++;
-        } catch (e) {
-          break;
-        }
-      }
-      if (chunks.length === 0) throw new Error('No data chunks found');
-      const fullBlob = new Blob(chunks, { type: 'application/octet-stream' });
-      const blobUrl = URL.createObjectURL(fullBlob);
-      console.log(`[superTux] Reassembled .data: ${fullBlob.size} bytes from ${chunks.length} chunks`);
-      return blobUrl;
-    }
-
-    const DATA_BLOB_URL = await fetchDataBlob();
+    const DATA_URL = 'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/supertux2.data';
 
     window.Module = {
       canvas: document.getElementById('canvas'),
@@ -170,7 +145,7 @@
 
       locateFile: (path, prefix) => {
         if (path.endsWith('.data')) {
-          return DATA_BLOB_URL;
+          return DATA_URL;
         }
         return prefix + path;
       },
