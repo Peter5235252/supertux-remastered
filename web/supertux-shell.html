@@ -107,7 +107,7 @@
   </div>
 
   <div id="error">
-    <h2>WebGPU not available</h2>
+    <h2 id="error-title">Game startup failed</h2>
     <p id="error-msg"></p>
     <p>Try a browser with WebGPU support (Chrome/Edge 113+, Firefox with flag).</p>
     <button onclick="location.reload()">Retry</button>
@@ -175,6 +175,16 @@
 
     let DATA_BLOB_URL = null;
 
+    function showError(title, error) {
+      console.error('[superTux] ' + title + ':', error);
+      document.getElementById('loading').classList.add('hidden');
+      const errorElement = document.getElementById('error');
+      document.getElementById('error-title').textContent = title;
+      document.getElementById('error-msg').textContent =
+        error instanceof Error ? (error.stack || error.message) : String(error);
+      errorElement.style.display = 'flex';
+    }
+
     window.Module = {
       canvas: document.getElementById('canvas'),
       print: (text) => { console.log('[superTux]', text); },
@@ -210,11 +220,7 @@
       onReady: null,
 
       onAbort: (what) => {
-        document.getElementById('loading').classList.add('hidden');
-        const err = document.getElementById('error');
-        err.style.display = 'flex';
-        document.getElementById('error-title').textContent = 'Load error';
-        document.getElementById('error-msg').textContent = String(what);
+        showError('Emscripten runtime aborted', what);
       },
     };
 
@@ -229,22 +235,12 @@
 
     // Global error handler for uncaught exceptions
     window.onerror = (msg, src, line, col, err) => {
-      console.error('[superTux] Uncaught error:', msg, 'at', src, line, col);
-      document.getElementById('loading').classList.add('hidden');
-      const errEl = document.getElementById('error');
-      errEl.style.display = 'flex';
-      document.getElementById('error-title').textContent = 'Runtime error';
-      document.getElementById('error-msg').textContent = String(msg);
+      showError('JavaScript runtime error', err || `${msg} (${src}:${line}:${col})`);
       return true; // Prevent default browser error handling
     };
 
     window.addEventListener('unhandledrejection', (event) => {
-      console.error('[superTux] Unhandled promise rejection:', event.reason);
-      document.getElementById('loading').classList.add('hidden');
-      const errEl = document.getElementById('error');
-      errEl.style.display = 'flex';
-      document.getElementById('error-title').textContent = 'Promise rejection';
-      document.getElementById('error-msg').textContent = String(event.reason);
+      showError('Unhandled startup rejection', event.reason);
     });
 
     async function preloadShaders() {
@@ -317,11 +313,7 @@
         }
       }, 30000);
     }).catch((err) => {
-      document.getElementById('loading').classList.add('hidden');
-      const errEl = document.getElementById('error');
-      errEl.style.display = 'flex';
-      document.getElementById('error-title').textContent = 'Load error';
-      document.getElementById('error-msg').textContent = err.message;
+      showError('Game loading failed', err);
     });
   </script>
 </body>
