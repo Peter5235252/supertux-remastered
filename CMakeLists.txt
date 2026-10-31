@@ -358,13 +358,6 @@ if(EMSCRIPTEN)
   # Link XDL_wgpu before every other library so its SDL_GPU symbols are
   # selected before the stock SDL3 port's empty GPU backend.
   target_link_libraries(supertux2 PUBLIC XDL_wgpu)
-  # WebGPU adapter/device acquisition is asynchronous and requires Asyncify.
-  # Keep a map so CI can verify which SDL_GPU implementation the linker chose.
-  target_link_options(supertux2 PUBLIC
-    -sASYNCIFY
-    -Wl,--trace-symbol=SDL_CreateGPUDevice
-    -Wl,-Map=${CMAKE_BINARY_DIR}/supertux2.map
-  )
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD|NetBSD")
