@@ -50,6 +50,8 @@ gpu_backend_display_name()
         return "DirectX 12";
       if (driver == "vulkan")
         return "Vulkan";
+      if (driver == "webgpu")
+        return "WebGPU";
     }
   }
 #if defined(__APPLE__)

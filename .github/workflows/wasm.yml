@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
     tags:
       - '*'
   pull_request: {}
@@ -45,7 +45,7 @@ jobs:
           cd ~
 
           sudo apt-get update
-          sudo apt-get install -y git cmake build-essential curl zip
+          sudo apt-get install -y git cmake build-essential curl zip ninja-build
 
           git clone https://github.com/emscripten-core/emsdk.git
           cd emsdk
@@ -68,8 +68,8 @@ jobs:
           source ~/emsdk/emsdk_env.sh
           mkdir build
           cd build
-          # TODO: Re-add -DWERROR=ON when warnings will be fixed
-          emcmake cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DWARNINGS=ON \
+          # WebGPU on WASM via SDL_GPU: request WebGPU feature from emscripten.
+          emcmake cmake .. -G Ninja -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DWARNINGS=ON \
                            -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake \
                            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=~/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
                            -DVCPKG_TARGET_TRIPLET=wasm32-emscripten -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
@@ -84,7 +84,7 @@ jobs:
         working-directory: build
         run: |
           source ~/emsdk/emsdk_env.sh
-          emmake make -j$(nproc)
+          cmake --build . -j$(nproc)
 
         # Now you can run a local server with: `emrun supertux2.html`
         # Or any traditional web server will do the job
@@ -95,7 +95,8 @@ jobs:
         env:
           BUILD_TYPE: ${{ matrix.build_type }}
         run: |
-          cp template.html supertux2.html
+          # Replace the emscripten default HTML with our custom shell.
+          cp ../web/supertux-shell.html supertux2.html
           mkdir upload/
           mv supertux2* upload/
 
@@ -106,12 +107,17 @@ jobs:
           path: build/upload/*
           if-no-files-found: ignore
 
-      - name: Upload to server
-        if: ${{ github.ref == 'refs/heads/master' && matrix.build_type == 'Release' }}
-        env:
-          UPLOAD_URL: ${{ secrets.UPLOAD_URL }}
+      - name: Prepare publish dir (website + WASM)
+        if: github.ref == 'refs/heads/main' && matrix.build_type == 'Release'
         run: |
-          cd build/upload/
-          mv supertux2.html index.html
-          zip supertux2.zip *
-          curl -F "archive=@$(pwd)/supertux2.zip" -F "message=$(git log --format=%B -n 1 | head -1)" $UPLOAD_URL
+          mkdir -p publish/wasm
+          cp index.html publish/
+          cp -r build/upload/* publish/wasm/
+
+      - name: Publish website + WASM port to GitHub Pages
+        if: github.ref == 'refs/heads/main' && matrix.build_type == 'Release'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./publish
+          keep_files: false

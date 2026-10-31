@@ -47,6 +47,10 @@ GPUShader::GPUShader(SDL_GPUDevice* device, const std::string& physfs_base_path,
   // Prefer the device's native format; the path carries no extension.
   struct FormatPick { SDL_GPUShaderFormat format; const char* ext; const char* entry; };
   static const FormatPick kPicks[] = {
+#if defined(__EMSCRIPTEN__)
+    // WebGPU on Emscripten/WASM uses WGSL shaders.
+    { SDL_GPU_SHADERFORMAT_WGSL, ".wgsl", "main" },
+#endif
     { SDL_GPU_SHADERFORMAT_MSL, ".msl", "main0" },
     { SDL_GPU_SHADERFORMAT_DXIL, ".dxil", "main" },
     { SDL_GPU_SHADERFORMAT_SPIRV, ".spv", "main" },

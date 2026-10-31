@@ -81,9 +81,13 @@ GPUVideoSystem::GPUVideoSystem() :
   create_sdl_window(0);
 
   // Native backend per OS: Metal on macOS, Direct3D 12 on Windows with a
-  // Vulkan fallback for machines without D3D12, Vulkan on Linux.
+  // Vulkan fallback for machines without D3D12, Vulkan on Linux,
+  // WebGPU on Emscripten/WASM.
   // (SDL_GPU has no Direct3D 11 backend, so D3D11 is not an option.)
-#if defined(__APPLE__)
+#if defined(__EMSCRIPTEN__)
+  SDL_SetHint(SDL_HINT_GPU_DRIVER, "webgpu");
+  m_device.reset(SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_WGSL, true, nullptr));
+#elif defined(__APPLE__)
   SDL_SetHint(SDL_HINT_GPU_DRIVER, "metal");
   m_device.reset(SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_MSL, true, nullptr));
 #elif defined(_WIN32)
