@@ -102,6 +102,16 @@ jobs:
         # Or any traditional web server will do the job
         # Note: opening the html file manually (file:///) won't work
 
+      - name: Verify WebGPU backend link selection
+        working-directory: build
+        run: |
+          test -f supertux2.map
+          grep -F 'libXDL_wgpu.a(SDL_gpu.c.o)' supertux2.map
+          if grep -Fq 'libSDL3.a(SDL_gpu.c.o)' supertux2.map; then
+            echo "ERROR: stock SDL3 GPU backend was linked instead of XDL_wgpu"
+            exit 1
+          fi
+
       - name: Setup files for upload
         working-directory: build
         env:
