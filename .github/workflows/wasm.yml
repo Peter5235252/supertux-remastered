@@ -125,17 +125,19 @@ jobs:
         if: github.ref == 'refs/heads/main' && matrix.build_type == 'Release'
         run: |
           mkdir -p publish/wasm
-          # Copy React website build to root
-          cp -r website/dist/* publish/
+          # Copy React website build to root (including all assets)
+          cp -a website/dist/. publish/
           # Copy WASM build (excluding .data) to wasm/
           cd build/upload
           for f in *; do
             case "$f" in
               *.data) echo "Skipping large data file: $f" ;;
-              *) cp -r "$f" "../../publish/wasm/" ;;
+              *) cp -a "$f" "../../publish/wasm/" ;;
             esac
           done
           cd ../..
+          echo "=== Published files ==="
+          find publish -type f | head -40
 
       - name: Upload .data file to GitHub Release
         if: github.ref == 'refs/heads/main' && matrix.build_type == 'Release'
