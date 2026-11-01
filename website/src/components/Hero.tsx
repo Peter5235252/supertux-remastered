@@ -70,7 +70,7 @@ export function Hero() {
             </a>
             <a href="wasm/supertux2.html" className="button button--glass button--hero">
               <Play size={16} />
-              Play in Browser (WebGPU)
+              Play in Browser (WebGL 2)
               <span className="button__badge">Experimental</span>
             </a>
             <a href="#worlds" className="button button--glass button--hero">
