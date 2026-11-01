@@ -24,6 +24,7 @@ const mime = {
   ".wasm": "application/wasm",
   ".map": "application/json",
   ".png": "image/png",
+  ".webp": "image/webp",
 };
 
 const server = createServer(async (req, res) => {
@@ -123,6 +124,26 @@ try {
       result = { ok: false, reason: "The game presented a frame, but the canvas has no WebGL 2 context." };
     } else {
       log(`WEBGL2: ${webgl.version}; renderer: ${webgl.renderer}`);
+      const artwork = await page.evaluate(async () => {
+        const images = Array.from(document.querySelectorAll("#loading img"));
+        return await Promise.all(images.map(async image => {
+          try {
+            await image.decode();
+            return { src: image.getAttribute("src"), loaded: image.naturalWidth > 0 };
+          } catch {
+            return { src: image.getAttribute("src"), loaded: false };
+          }
+        }));
+      });
+      const missingArtwork = artwork.filter(image => !image.loaded);
+      if (missingArtwork.length > 0) {
+        result = {
+          ok: false,
+          reason: "Loading-screen artwork failed to load: " + missingArtwork.map(image => image.src).join(", "),
+        };
+      } else {
+        log(`LOADING ARTWORK: ${artwork.length} images loaded.`);
+      }
     }
   }
   log(`RESULT: ${result.ok ? "PASS" : "FAIL"} — ${result.reason}`);
