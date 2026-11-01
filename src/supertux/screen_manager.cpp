@@ -655,9 +655,12 @@ void ScreenManager::loop_iter()
   bool always_draw = g_debug.draw_redundant_frames || g_config->frame_prediction;
 
   if (elapsed_time < seconds_per_step && !always_draw) {
-    // Sleep a bit because not enough time has passed since the previous
-    // logical game step
+#ifndef __EMSCRIPTEN__
+    // Native builds need to sleep to avoid busy-waiting. The Emscripten main
+    // loop is already paced by requestAnimationFrame; SDL_Delay would suspend
+    // and asynchronously rewind a browser frame callback through Asyncify.
     SDL_Delay(static_cast<Uint32>(1000.0f * (seconds_per_step - elapsed_time)));
+#endif
     return;
   }
 
