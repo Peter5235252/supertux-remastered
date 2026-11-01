@@ -22,10 +22,10 @@
 
 class GPUVideoSystem;
 
-/** Phase 1: real GPU texture. Pixel data is uploaded through an
-    SDL_GPUTransferBuffer and a full mip chain is generated, so minified
-    4K assets filter smoothly. The SDL_GPUSampler is shared from the
-    video system cache (see GPUVideoSystem::get_shared_sampler). */
+/** GPU texture. Pixel data is uploaded through an SDL_GPUTransferBuffer
+    and a full mip chain is generated for smooth filtering at reduced sizes.
+    The SDL_GPUSampler is shared from the video system cache
+    (see GPUVideoSystem::get_shared_sampler). */
 class GPUTexture final : public Texture
 {
 public:
