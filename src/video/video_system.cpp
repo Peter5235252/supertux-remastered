@@ -92,8 +92,8 @@ VideoSystem::create(VideoSystem::Enum video_system)
 VideoSystem::Enum
 VideoSystem::get_video_system(const std::string &video)
 {
-  // SDL_GPU (Vulkan) is the only renderer; legacy names map to it so old
-  // configs and command lines keep working.
+  // Native builds use SDL_GPU and the WebAssembly build uses WebGL 2.
+  // Legacy names map to VIDEO_GPU so existing configs keep working.
   if (video == "gpu" || video == "sdl" || video == "auto" ||
       video == "opengl_auto" || video == "opengl" || video == "opengl33" ||
       video == "opengl33core" || video == "opengl20")
