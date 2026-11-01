@@ -2,7 +2,7 @@
 
 ## Device memory requirements
 
-- **Minimum: 6 GB RAM.**
+- **Minimum: 4 GB RAM.**
 - **Recommended: 8 GB RAM.**
 
 These are the project's published RAM requirements for Android devices.

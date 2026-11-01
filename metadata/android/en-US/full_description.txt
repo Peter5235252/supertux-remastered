@@ -1,6 +1,6 @@
 SuperTux is a jump'n'run game with strong inspiration from the Super Mario Bros. games for the various Nintendo platforms.
 
-ANDROID REQUIREMENTS: 6 GB RAM minimum; 8 GB RAM recommended.
+ANDROID REQUIREMENTS: 4 GB RAM minimum; 8 GB RAM recommended.
 
 Run and jump through multiple worlds, fighting off enemies by jumping on them, bumping them from below or tossing objects at them, grabbing power-ups and other stuff on the way.
 

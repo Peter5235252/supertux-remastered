@@ -406,7 +406,7 @@ export function AndroidUsbInstaller() {
         <div>
           <span className="mono-label">Direct USB · WebUSB + ADB</span>
           <h3>Install directly to your phone</h3>
-          <p>No terminal or Android SDK needed. The browser communicates with your phone over USB. Android requirements: 6 GB RAM minimum; 8 GB recommended.</p>
+          <p>No terminal or Android SDK needed. The browser communicates with your phone over USB. Android requirements: 4 GB RAM minimum; 8 GB recommended.</p>
         </div>
         <span className="hero__adb-icon"><Smartphone size={22} /></span>
       </div>

@@ -168,7 +168,7 @@ export const FAQS = [
   },
   {
     q: 'What are the desktop and Android system requirements?',
-    a: 'Both desktop and Android builds need at least 6 GB of RAM. 8 GB of RAM is recommended.',
+    a: 'Both desktop and Android builds need at least 4 GB of RAM. 8 GB of RAM is recommended.',
   },
   {
     q: 'What are the Linux requirements?',
