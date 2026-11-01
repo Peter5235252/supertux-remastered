@@ -56,6 +56,7 @@ extern "C" {
 #include "physfs/physfs_sdl.hpp"
 #include "physfs/util.hpp"
 #include "port/emscripten.hpp"
+#include "port/emscripten_log.hpp"
 #include "sdk/integration.hpp"
 #include "sprite/sprite_data.hpp"
 #include "sprite/sprite_manager.hpp"
@@ -571,13 +572,17 @@ void
 Main::launch_game(const CommandLineArguments& args)
 {
   s_timelog.log("addons");
+  supertux_wasm_phase("launch_game: initializing add-ons");
   m_addon_manager.reset(new AddonManager("addons", g_config->addons));
+  supertux_wasm_phase("launch_game: add-ons initialized");
 
   /** Add-ons or the user directory may have possibly overriden essential files,
       so re-mount the directories, containing those files. */
   m_physfs_subsystem->remount_datadir_static();
 
+  supertux_wasm_phase("launch_game: initializing SDL");
   m_sdl_subsystem.reset(new SDLSubsystem());
+  supertux_wasm_phase("launch_game: SDL initialized");
   m_console_buffer.reset(new ConsoleBuffer());
 #ifdef ENABLE_TOUCHSCREEN_SUPPORT
   if (getenv("ANDROID_TV")) {
@@ -586,10 +591,13 @@ Main::launch_game(const CommandLineArguments& args)
 #endif
 
   s_timelog.log("controller");
+  supertux_wasm_phase("launch_game: initializing input");
   m_input_manager.reset(new InputManager(g_config->keyboard_config, g_config->joystick_config));
+  supertux_wasm_phase("launch_game: input initialized");
 
   s_timelog.log("commandline");
 
+  supertux_wasm_phase("launch_game: constructing VideoSystem");
 #ifndef __EMSCRIPTEN__
   auto video = g_config->video;
   if (args.resave && *args.resave) {
@@ -606,25 +614,35 @@ Main::launch_game(const CommandLineArguments& args)
   // WebAssembly uses the WebGPU renderer via SDL_GPU.
   m_video_system = VideoSystem::create(VideoSystem::VIDEO_GPU);
 #endif
+  supertux_wasm_phase("launch_game: VideoSystem constructed");
   init_video();
+  supertux_wasm_phase("launch_game: video initialized");
 
+  supertux_wasm_phase("launch_game: initializing text rendering");
   m_ttf_surface_manager.reset(new TTFSurfaceManager());
+  supertux_wasm_phase("launch_game: text rendering initialized");
 
   s_timelog.log("audio");
+  supertux_wasm_phase("launch_game: initializing audio");
   m_sound_manager.reset(new SoundManager());
+  supertux_wasm_phase("launch_game: audio initialized");
   m_sound_manager->enable_sound(g_config->sound_enabled);
   m_sound_manager->enable_music(g_config->music_enabled);
   m_sound_manager->set_sound_volume(g_config->sound_volume);
   m_sound_manager->set_music_volume(g_config->music_volume);
 
   s_timelog.log("scripting");
+  supertux_wasm_phase("launch_game: initializing scripting VM");
   m_squirrel_virtual_machine.reset(new SquirrelVirtualMachine(g_config->enable_script_debugger));
+  supertux_wasm_phase("launch_game: scripting VM initialized");
 
   s_timelog.log("resources");
+  supertux_wasm_phase("launch_game: initializing game resources");
   m_tile_manager.reset(new TileManager());
   m_sprite_manager.reset(new SpriteManager());
   m_profile_manager.reset(new ProfileManager());
   m_resources.reset(new Resources());
+  supertux_wasm_phase("launch_game: game resources initialized");
 
   s_timelog.log("integrations");
   Integration::setup();
@@ -636,7 +654,9 @@ Main::launch_game(const CommandLineArguments& args)
   m_savegame = std::make_unique<Savegame>(m_profile_manager->get_current_profile(), "");
 
   m_game_manager.reset(new GameManager());
+  supertux_wasm_phase("launch_game: constructing ScreenManager");
   m_screen_manager.reset(new ScreenManager(*m_video_system, *m_input_manager));
+  supertux_wasm_phase("launch_game: ScreenManager constructed");
 
   if (!args.filenames.empty())
   {
@@ -736,6 +756,7 @@ Main::launch_game(const CommandLineArguments& args)
     }
   }
 
+  supertux_wasm_phase("launch_game: entering main loop");
   m_screen_manager->run();
 }
 
@@ -747,6 +768,7 @@ Main::run(int argc, char** argv)
 
 #ifdef __EMSCRIPTEN__
   init_emscripten();
+  supertux_wasm_phase("main: C++ entry point reached");
 #endif
 
 #ifdef WIN32
@@ -784,10 +806,12 @@ Main::run(int argc, char** argv)
   try
   {
 #endif
+    supertux_wasm_phase("main: parsing command-line arguments");
     CommandLineArguments args;
     try
     {
       args.parse_args(argc, argv);
+      supertux_wasm_phase("main: command-line arguments parsed");
       g_log_level = args.get_log_level();
       g_log_tinygettext = args.log_tinygettext;
     }
@@ -797,19 +821,25 @@ Main::run(int argc, char** argv)
       return EXIT_FAILURE;
     }
 
+    supertux_wasm_phase("main: initializing PhysicsFS");
 #ifdef __ANDROID__
     m_physfs_subsystem.reset(new PhysfsSubsystem(argv[0], args.datadir, SDL_GetAndroidExternalStoragePath()));
 #else
     m_physfs_subsystem.reset(new PhysfsSubsystem(argv[0], args.datadir, args.userdir));
 #endif
+    supertux_wasm_phase("main: PhysicsFS initialized");
     m_physfs_subsystem->print_search_path();
 
     s_timelog.log("config");
+    supertux_wasm_phase("main: loading configuration");
     m_config_subsystem.reset(new ConfigSubsystem());
     args.merge_into(*g_config);
+    supertux_wasm_phase("main: configuration loaded");
 
     s_timelog.log("tinygettext");
+    supertux_wasm_phase("main: initializing translations");
     init_tinygettext();
+    supertux_wasm_phase("main: translations initialized");
 
     switch (args.get_action())
     {
