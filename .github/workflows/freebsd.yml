@@ -29,8 +29,6 @@ on:
       - master
     tags:
       - '*'
-  pull_request: {}
-
 jobs:
   bsd:
 

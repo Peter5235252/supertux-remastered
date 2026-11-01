@@ -30,10 +30,6 @@ on:
       - '*'
     paths:
       - 'src/**'
-  pull_request:
-    paths:
-      - 'src/**'
-
 jobs:
   lint_cppcheck:
     runs-on: ubuntu-latest

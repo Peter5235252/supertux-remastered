@@ -28,8 +28,6 @@ on:
       - master
     tags:
       - '*'
-  pull_request: {}
-
 jobs:
   gnulinux:
     strategy:
