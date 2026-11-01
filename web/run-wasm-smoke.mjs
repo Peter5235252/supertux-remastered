@@ -3,7 +3,6 @@ import { createReadStream } from "node:fs";
 import { stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 const root = path.resolve(process.argv[2] ?? "build");
 const require = createRequire(path.join(root, "node", "package.json"));
