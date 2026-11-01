@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, CheckCircle2, Download, FileUp, LoaderCircle, Smartphone, Usb, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Download, FileUp, Loader2, Smartphone, Usb, X } from 'lucide-react'
 import { RELEASE, RELEASES_URL } from '../data'
 
 type AdbClient = {
@@ -402,7 +402,7 @@ export function AndroidUsbInstaller() {
           onClick={connectDevice}
           disabled={!browserSupported || !modules || connecting || installing}
         >
-          {connecting ? <LoaderCircle size={17} className="hero__adb-spinner" /> : <Usb size={17} />}
+          {connecting ? <Loader2 size={17} className="hero__adb-spinner" /> : <Usb size={17} />}
           {connecting ? 'Connecting…' : !modules ? 'Loading USB installer…' : 'Connect Android phone'}
         </button>
       ) : (
@@ -447,7 +447,7 @@ export function AndroidUsbInstaller() {
               onClick={installGame}
               disabled={!canInstall}
             >
-              {installing ? <LoaderCircle size={17} className="hero__adb-spinner" /> : installed ? <CheckCircle2 size={17} /> : <Download size={17} />}
+              {installing ? <Loader2 size={17} className="hero__adb-spinner" /> : installed ? <CheckCircle2 size={17} /> : <Download size={17} />}
               {installing ? 'Installing…' : installed ? 'Installed' : 'Install SuperTux'}
             </button>
             <button
