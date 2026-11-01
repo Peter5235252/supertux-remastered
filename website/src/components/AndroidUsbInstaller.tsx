@@ -20,8 +20,7 @@ type UsbManager = {
 }
 
 type PackageInstaller = {
-  installStream(
-    size: number,
+  pushAndInstallStream(
     stream: ReadableStream<Uint8Array>,
     options?: Record<string, unknown>,
   ): Promise<void>
@@ -92,7 +91,10 @@ const CDN_MODULES = {
   androidBin: 'https://esm.sh/@yume-chan/android-bin@2.1.0?bundle',
 }
 
-function errorMessage(error: unknown): string {
+function errorMessage(
+  error: unknown,
+  stage: 'modules' | 'connection' | 'download' | 'transfer' | 'install' = 'install',
+): string {
   const message = error instanceof Error ? error.message : String(error)
   if (/NotFoundError/i.test(message)) {
     return 'No USB device was selected. Connect your phone and try again.'
@@ -104,7 +106,19 @@ function errorMessage(error: unknown): string {
     return 'ADB authorization was not completed. Unlock your phone and approve the USB debugging fingerprint prompt.'
   }
   if (/Failed to fetch|Load failed|NetworkError/i.test(message)) {
-    return 'The APK could not be fetched from the release server. Download the APK below and select it from this computer instead.'
+    if (stage === 'download') {
+      return 'The APK download failed. Use the direct APK download link and select the file from this computer instead.'
+    }
+    if (stage === 'modules') {
+      return 'The browser ADB libraries could not be loaded. Check the network connection and reload this page.'
+    }
+    if (stage === 'connection') {
+      return 'The ADB USB connection failed or was interrupted. Reconnect the phone, unlock it, and approve the USB debugging prompt.'
+    }
+    if (stage === 'transfer') {
+      return 'The USB connection was interrupted while sending the APK. Keep the phone connected and unlocked, close other ADB tools, reconnect, and retry.'
+    }
+    return 'The USB connection was interrupted while Android was installing the APK. Reconnect the phone and retry the installation.'
   }
   if (/INSTALL_FAILED_UPDATE_INCOMPATIBLE/i.test(message)) {
     return 'Android rejected this update because the installed app was signed with a different key. Uninstall the existing SuperTux app first, then install again.'
@@ -225,7 +239,7 @@ export function AndroidUsbInstaller() {
         }
       })
       .catch((cause: unknown) => {
-        if (active) setModulesError(errorMessage(cause))
+        if (active) setModulesError(errorMessage(cause, 'modules'))
       })
 
     return () => {
@@ -296,7 +310,7 @@ export function AndroidUsbInstaller() {
     } catch (cause) {
       adbRef.current = null
       transportRef.current = null
-      setError(errorMessage(cause))
+      setError(errorMessage(cause, 'connection'))
       setPhase('Connection failed.')
     } finally {
       setConnecting(false)
@@ -328,6 +342,8 @@ export function AndroidUsbInstaller() {
     setError('')
     setProgress(0)
 
+    let failureStage: 'download' | 'transfer' | 'install' = selectedFile ? 'transfer' : 'download'
+
     try {
       let file = selectedFile
       if (!file) {
@@ -347,8 +363,9 @@ export function AndroidUsbInstaller() {
         throw new Error('The selected APK file is empty.')
       }
 
+      failureStage = 'transfer'
       setProgress(0)
-      setPhase(`Installing ${file.name} on ${deviceName}…`)
+      setPhase(`Sending ${file.name} to ${deviceName} over USB…`)
       const activeModules = modules
       if (!activeModules) throw new Error(modulesError || 'The browser ADB client has not loaded yet.')
       const PackageManager = activeModules.androidBin.PackageManager
@@ -362,15 +379,21 @@ export function AndroidUsbInstaller() {
             setProgress(Math.min(99, Math.round((uploaded / file!.size) * 100)))
             controller.enqueue(chunk)
           },
+          flush() {
+            failureStage = 'install'
+            setProgress(100)
+            setPhase('APK transferred. Waiting for Android to finish installation…')
+          },
         }),
       )
 
-      await packageManager.installStream(file.size, stream)
-      setProgress(100)
+      // Use ADB sync followed by `pm install` instead of `cmd package install -S`.
+      // This avoids depending on the device's streaming-install implementation.
+      await packageManager.pushAndInstallStream(stream)
       setInstalled(true)
       setPhase('SuperTux Remastered was installed successfully.')
     } catch (cause) {
-      setError(errorMessage(cause))
+      setError(errorMessage(cause, failureStage))
       setPhase('Installation failed.')
     } finally {
       setInstalling(false)
