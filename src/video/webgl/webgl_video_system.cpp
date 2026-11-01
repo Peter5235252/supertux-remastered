@@ -651,8 +651,14 @@ WebGLVideoSystem::apply_config()
 #endif
   m_viewport = Viewport::from_size(target_size, m_desktop_size);
 
-  // WebGL 2 targets SDR output; do not leave an unsupported HDR mode enabled.
+  // WebGL 2 targets SDR output and this renderer has no FSR post-processing.
   g_config->use_hdr = false;
+  if (g_config->fsr_mode != 0)
+  {
+    log_warning << "FSR is not available in the WebGL 2 renderer; disabling it."
+                << std::endl;
+    g_config->fsr_mode = 0;
+  }
   set_vsync(g_config->vsync);
 }
 
