@@ -60,7 +60,7 @@ jobs:
 
           git clone https://github.com/emscripten-core/emsdk.git
           cd emsdk
-          # XDL_wgpu is validated against Emscripten 6.0.3 and its emdawnwebgpu port.
+          # Keep Emscripten pinned for reproducible WebGL 2 browser builds.
           ./emsdk install 6.0.3
           ./emsdk activate 6.0.3
 
@@ -80,7 +80,7 @@ jobs:
           source ~/emsdk/emsdk_env.sh
           mkdir build
           cd build
-          # WebGPU on WASM via XDL_wgpu + emdawnwebgpu.
+          # WebGL 2 on WASM via Emscripten's OpenGL ES 3.0 implementation.
           emcmake cmake .. -G Ninja -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DWARNINGS=ON \
                            -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake \
                            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=~/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
@@ -102,17 +102,7 @@ jobs:
         # Or any traditional web server will do the job
         # Note: opening the html file manually (file:///) won't work
 
-      - name: Verify WebGPU backend link selection
-        working-directory: build
-        run: |
-          test -f supertux2.map
-          grep -F 'libXDL_wgpu.a(SDL_gpu.c.o)' supertux2.map
-          if grep -Fq 'libSDL3.a(SDL_gpu.c.o)' supertux2.map; then
-            echo "ERROR: stock SDL3 GPU backend was linked instead of XDL_wgpu"
-            exit 1
-          fi
-
-      - name: Install Chromium for WebGPU runtime tests
+      - name: Install Chromium for WebGL 2 runtime tests
         if: matrix.build_type == 'Release'
         run: |
           sudo apt-get update
@@ -123,18 +113,10 @@ jobs:
           mkdir -p build/external
           ln -s "$GITHUB_WORKSPACE/build/node" "$GITHUB_WORKSPACE/build/external/node"
 
-      - name: Test XDL_wgpu in headless Chromium
-        if: matrix.build_type == 'Release'
-        run: |
-          source ~/emsdk/emsdk_env.sh
-          node external/XDL_wgpu/tools/run-test.mjs "$GITHUB_WORKSPACE/build/external/XDL_wgpu"
-
-      - name: Test SuperTux startup and first frame in headless Chromium
+      - name: Test SuperTux startup and first frame in WebGL 2 Chromium
         if: matrix.build_type == 'Release'
         run: |
           cp web/supertux-shell.html build/supertux2.html
-          mkdir -p build/shader
-          cp build/data/shader/*.wgsl build/shader/
           split -b 50M -a 2 build/supertux2.data build/supertux2.data.part
           chunk_count=$(find build -maxdepth 1 -type f -name 'supertux2.data.part??' | wc -l)
           printf '%s\n' "$chunk_count" > build/supertux2.data.parts
@@ -199,9 +181,6 @@ jobs:
           echo "=== Published game-data chunks ($chunk_count) ==="
           ls -lh publish/wasm/supertux2.data.part*
 
-          # Copy shader files for WebGPU WGSL pre-compilation
-          mkdir -p publish/wasm/shader
-          cp -a data/shader/*.wgsl publish/wasm/shader/
           echo "=== Published files ==="
           find publish -type f | head -40
 

@@ -11,6 +11,9 @@
 #include <SDL3/SDL.h>
 
 #include <memory>
+#include <vector>
+
+#include "video/blend.hpp"
 
 #include "video/gl.hpp"
 #include "video/painter.hpp"

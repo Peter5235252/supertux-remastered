@@ -60,9 +60,10 @@ try {
     headless: true,
     args: [
       "--no-sandbox",
-      "--enable-unsafe-webgpu",
-      "--enable-features=Vulkan",
-      "--use-angle=vulkan",
+      "--use-gl=angle",
+      "--use-angle=swiftshader",
+      "--enable-webgl",
+      "--enable-unsafe-swiftshader",
       "--ignore-gpu-blocklist",
     ],
   });
@@ -88,7 +89,7 @@ try {
         settle({ ok: true, reason: "SuperTux rendered its first frame." });
       }
     }
-    if (/Unhandled startup rejection|RuntimeError:|WebGPU preflight failed|GPU initialization failed/i.test(text)) {
+    if (/Unhandled startup rejection|RuntimeError:|WebGL initialization failed|WebGL shader compilation failed|WebGL shader linking failed/i.test(text)) {
       settle({ ok: false, reason: text });
     }
   });
@@ -111,7 +112,19 @@ try {
     resolve({ ok: false, reason: `Timed out after ${timeoutMs} ms; last startup phase: ${lastPhase}` });
   }, timeoutMs));
 
-  const result = await Promise.race([verdict, timeout]);
+  let result = await Promise.race([verdict, timeout]);
+  if (result.ok) {
+    const webgl = await page.evaluate(() => {
+      const gl = document.getElementById("canvas")?.getContext("webgl2");
+      if (!gl) return null;
+      return { version: gl.getParameter(gl.VERSION), renderer: gl.getParameter(gl.RENDERER) };
+    });
+    if (!webgl) {
+      result = { ok: false, reason: "The game presented a frame, but the canvas has no WebGL 2 context." };
+    } else {
+      log(`WEBGL2: ${webgl.version}; renderer: ${webgl.renderer}`);
+    }
+  }
   log(`RESULT: ${result.ok ? "PASS" : "FAIL"} — ${result.reason}`);
   if (!result.ok) {
     log(`LAST STARTUP PHASE: ${lastPhase}`);

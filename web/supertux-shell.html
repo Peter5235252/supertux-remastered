@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#050b13" />
-  <title>SuperTux Remastered — WebGPU / WASM</title>
+  <title>SuperTux Remastered — WebGL 2 / WASM</title>
   <style>
     html, body {
       margin: 0;
@@ -100,7 +100,7 @@
   <div id="loading">
     <div class="spinner"></div>
     <h1>SuperTux Remastered</h1>
-    <p id="loading-text">Preparing WebGPU shaders…</p>
+    <p id="loading-text">Preparing WebGL 2 renderer…</p>
     <div class="progress">
       <div class="progress-bar" id="progress-bar"></div>
     </div>
@@ -110,22 +110,11 @@
   <div id="error">
     <h2 id="error-title">Game startup failed</h2>
     <p id="error-msg"></p>
-    <p>Try a browser with WebGPU support (Chrome/Edge 113+, Firefox with flag).</p>
+    <p>Use a browser with WebGL 2 support (OpenGL ES 3.0).</p>
     <button onclick="location.reload()">Retry</button>
   </div>
 
   <script type="module">
-    // List of WGSL shaders that SDL_GPU compiles at startup.
-    // Pre-fetching them here ensures they are compiled/cached before
-    // the game loop starts, for a smoother first frame.
-    const SHADERS = [
-      'shader/gpu_textured.vert.wgsl',
-      'shader/gpu_textured.frag.wgsl',
-      'shader/gpu_fullscreen.vert.wgsl',
-      'shader/gpu_fsr_easu.frag.wgsl',
-      'shader/gpu_fsr_rcas.frag.wgsl',
-    ];
-
     function setProgress(pct, label) {
       document.getElementById('progress-bar').style.width = pct + '%';
       document.getElementById('progress-text').textContent = pct + '%';
@@ -465,55 +454,8 @@
       window.supertux_saveFiles();
     });
 
-    async function preloadShaders() {
-      if (!navigator.gpu) {
-        throw new Error('WebGPU is unavailable in this browser.');
-      }
-
-      const adapter = await navigator.gpu.requestAdapter();
-      if (!adapter) {
-        throw new Error('WebGPU could not find a compatible graphics adapter.');
-      }
-
-      // Validate every WGSL module before downloading the large game-data
-      // archive. The validation device is released before SDL creates its own.
-      const validationDevice = await adapter.requestDevice();
-      try {
-        for (let i = 0; i < SHADERS.length; i++) {
-          const pct = Math.round(((i + 1) / SHADERS.length) * 100);
-          setProgress(pct, `Validating shader ${i + 1} / ${SHADERS.length}…`);
-
-          const resp = await fetch(SHADERS[i]);
-          if (!resp.ok) {
-            throw new Error(`HTTP ${resp.status} for ${SHADERS[i]}`);
-          }
-
-          const code = await resp.text();
-          const module = validationDevice.createShaderModule({
-            label: SHADERS[i],
-            code
-          });
-          const compilation = await module.getCompilationInfo();
-          const errors = compilation.messages.filter(message => message.type === 'error');
-          if (errors.length > 0) {
-            const details = errors.map(message =>
-              `line ${message.lineNum}, column ${message.linePos}: ${message.message}`
-            ).join('\\n');
-            throw new Error(`WGSL validation failed for ${SHADERS[i]}:\\n${details}`);
-          }
-        }
-      } finally {
-        validationDevice.destroy();
-      }
-
-      setProgress(100, 'Shaders validated. Starting game…');
-    }
-
     async function init() {
-      // Phase 1: Pre-load the WGSL shader assets.
-      await preloadShaders();
-
-      // Phase 2: Download and reassemble the same-origin data chunks.
+      // Download and reassemble the same-origin data chunks.
       // Keep this inside init() so failures are handled by the visible catch
       // handler below rather than an unhandled top-level module rejection.
       DATA_BLOB_URL = await fetchDataBlob();
@@ -551,7 +493,7 @@
           errEl.style.display = 'flex';
           document.getElementById('error-title').textContent = 'Game failed to start';
           document.getElementById('error-msg').textContent =
-            'The game did not initialize. This may be a WebGPU compatibility issue. Check the browser console (F12) for details.';
+            'The game did not initialize. This may be a WebGL 2 compatibility issue. Check the browser console (F12) for details.';
         }
       }, 30000);
     }).catch((err) => {

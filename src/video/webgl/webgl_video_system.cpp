@@ -193,13 +193,16 @@ WebGLTexture::upload(const SDL_Surface& image)
     src = converted;
   }
 
-  std::vector<Uint8> pixels(static_cast<size_t>(src->w) *
-                            static_cast<size_t>(src->h) * 4);
+  const int width = src->w;
+  const int height = src->h;
+  const int pitch = src->pitch;
+  std::vector<Uint8> pixels(static_cast<size_t>(width) *
+                            static_cast<size_t>(height) * 4);
   const Uint8* source_pixels = static_cast<const Uint8*>(src->pixels);
-  const size_t row_bytes = static_cast<size_t>(src->w) * 4;
-  for (int y = 0; y < src->h; ++y)
+  const size_t row_bytes = static_cast<size_t>(width) * 4;
+  for (int y = 0; y < height; ++y)
     std::memcpy(pixels.data() + static_cast<size_t>(y) * row_bytes,
-                source_pixels + static_cast<size_t>(y) * src->pitch,
+                source_pixels + static_cast<size_t>(y) * pitch,
                 row_bytes);
 
   if (converted)
@@ -211,13 +214,13 @@ WebGLTexture::upload(const SDL_Surface& image)
   glGenTextures(1, &m_handle);
   glBindTexture(GL_TEXTURE_2D, m_handle);
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, src->w, src->h, 0,
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
                GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
 
   const bool linear = m_sampler.get_filter() != GL_NEAREST;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
                   linear ? GL_LINEAR : GL_NEAREST);
-  const bool has_mipmaps = src->w > 1 || src->h > 1;
+  const bool has_mipmaps = width > 1 || height > 1;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                   has_mipmaps ?
                     (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST) :
@@ -229,8 +232,8 @@ WebGLTexture::upload(const SDL_Surface& image)
   if (has_mipmaps)
     glGenerateMipmap(GL_TEXTURE_2D);
 
-  m_width = src->w;
-  m_height = src->h;
+  m_width = width;
+  m_height = height;
 }
 
 WebGLPainter::WebGLPainter(WebGLVideoSystem& video_system, bool is_screen) :
