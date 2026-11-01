@@ -35,32 +35,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Compile the latest Cppcheck source. Download to a file first so a
-      # truncated HTTP response cannot be hidden by a successful tar pipeline.
+      # Build the latest Cppcheck release from its current upstream repository.
       - name: Install Cppcheck
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y g++ make curl jq
 
-          RELEASE_API_URL="https://api.github.com/repos/danmar/cppcheck/releases/latest"
-          # GitHub currently redirects this endpoint, so follow the 301.
+          RELEASE_API_URL="https://api.github.com/repos/cppcheck-opensource/cppcheck/releases/latest"
           curl --fail --location --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
             "$RELEASE_API_URL" -o cppcheck-release.json
-          TARBALL_URL=$(jq --exit-status --raw-output \
-            '.tarball_url | select(type == "string" and length > 0)' cppcheck-release.json)
+
+          if ! TARBALL_URL=$(jq --exit-status --raw-output \
+            '.tarball_url | select(type == "string" and length > 0)' cppcheck-release.json); then
+            echo "GitHub's Cppcheck release response did not contain a tarball_url:"
+            cat cppcheck-release.json
+            exit 1
+          fi
 
           curl --fail --location --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
             "$TARBALL_URL" -o cppcheck.tar.gz
-          tar --extract --gzip --file=cppcheck.tar.gz
 
-          CPPHECK_SOURCE_DIR=$(find . -maxdepth 1 -type d -name 'danmar-cppcheck-*' -print -quit)
-          test -n "$CPPHECK_SOURCE_DIR"
-          make -C "$CPPHECK_SOURCE_DIR" -j"$(nproc)" CXXFLAGS="-O1 -DNDEBUG"
+          mkdir cppcheck-src
+          tar --extract --gzip --file=cppcheck.tar.gz --strip-components=1 --directory=cppcheck-src
+          make -C cppcheck-src -j"$(nproc)" CXXFLAGS="-O1 -DNDEBUG"
 
       - name: Lint code with Cppcheck
         run: |
-          ./danmar-cppcheck-*/cppcheck \
+          ./cppcheck-src/cppcheck \
             --check-level=exhaustive --include=mk/cppcheck/include/SDL.h \
             --quiet --inline-suppr --language=c++ --error-exitcode=10 \
             -j"$(nproc)" --std=c++17 --enable=warning,style \
