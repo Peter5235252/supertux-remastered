@@ -432,7 +432,9 @@ if(EMSCRIPTEN)
   # Keep the linker map and symbol trace for the CI backend-selection check.
   target_link_options(supertux2 PUBLIC
     -sASYNCIFY
-    -sASYNCIFY_STACK_SIZE=65536
+    # Asyncify's spill stack is separate from the native C/C++ stack. WebGPU fence waits
+    # yield through SDL_DelayNS()/emscripten_sleep(), preserving this full C++ call chain.
+    -sASYNCIFY_STACK_SIZE=1048576
     -sSTACK_SIZE=1048576
     -Wl,--trace-symbol=SDL_CreateGPUDevice
     -Wl,-Map=${CMAKE_BINARY_DIR}/supertux2.map
