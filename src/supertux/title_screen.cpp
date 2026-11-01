@@ -49,13 +49,7 @@ static const std::string DEFAULT_TITLE_LEVEL = "levels/misc/menu.stl";
 TitleScreen::TitleScreen(Savegame& savegame, bool christmas) :
   m_savegame(savegame),
   m_christmas(christmas),
-  m_logo(Surface::from_file("images/engine/menu/" + std::string(
-#ifdef IS_SUPERTUX_RELEASE
-    "logo.png"
-#else
-    "logo_dev.png"
-#endif
-  ))),
+  m_logo(Surface::from_file("images/engine/menu/logo.png")),
   m_santahat(christmas ? Surface::from_file("images/engine/menu/logo_santahat.png") : nullptr),
   m_frame(Surface::from_file("images/engine/menu/frame.png")),
   m_controller(new CodeController()),
@@ -298,7 +292,7 @@ void
 TitleScreen::refresh_copyright_text()
 {
   // cppcheck-suppress unknownMacro
-  m_copyright_text = "SuperTux " PACKAGE_VERSION "\n" +
+  m_copyright_text = "SuperTux\n" +
     _("Copyright") + " (c) 2003-2026 SuperTux Devel Team\n" +
     _("This game comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to\n"
       "redistribute it under certain conditions; see the license file for details.\n");

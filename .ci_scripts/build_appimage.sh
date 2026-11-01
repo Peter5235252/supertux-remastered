@@ -43,7 +43,7 @@ get_desktop
 
 # SVG icons are not supported by get_icon, copy it over manually.
 cp ./usr/share/icons/hicolor/scalable/apps/$LOWERAPP.svg . || true
-cp ./usr/share/pixmaps/supertux-nightly.png . || true
+cp ./usr/share/pixmaps/supertux.png . || true
 ls -lh $LOWERAPP.svg || true
 
 ########################################################################

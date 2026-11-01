@@ -464,7 +464,7 @@ fn write_launchers(prefix: &Path, create_shortcut: bool) -> Result<(), String> {
             .unwrap_or_else(|| PathBuf::from("~/.local/share"))
             .join("applications");
         let _ = fs::create_dir_all(&applications);
-        let icon = prefix.join("share/icons/hicolor/128x128/apps/supertux-nightly.png");
+        let icon = prefix.join("share/icons/hicolor/128x128/apps/supertux.png");
         let entry = format!(
             "[Desktop Entry]\nType=Application\nVersion=1.5\nName=SuperTux Remastered\nComment=Independent hobbyist remaster of SuperTux 2\nExec=\"{}\"\nIcon={}\nTerminal=false\nStartupNotify=true\nStartupWMClass=supertux2\nCategories=Game;ArcadeGame;\nKeywords=game;platform;penguin;tux;\n",
             prefix.join("games/supertux2").display(),

@@ -36,16 +36,12 @@ else()
     # The CPack Bundle generator installs Info.plist and the app icon itself,
     # via the CPACK_BUNDLE_PLIST/CPACK_BUNDLE_ICON variables set in BuildCPack.cmake.
   else()
-    # HACK: Flatpak is dumb right now and still uses nightly icons, so ignore that case
-    if(IS_SUPERTUX_RELEASE AND NOT FLATPAK)
-      set(LINUX_DESKTOP_ICON "supertux2")
-      install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux.png ${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux.xpm DESTINATION "share/pixmaps/")
-    else()
-      set(LINUX_DESKTOP_ICON "supertux-nightly")
-      install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux-nightly.png ${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux.xpm DESTINATION "share/pixmaps/")
-      # TODO: Is this really needed?
-      install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux-nightly.png DESTINATION "share/icons/hicolor/128x128/apps")
-    endif()
+    set(LINUX_DESKTOP_ICON "supertux2")
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux.png
+                  ${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux.xpm
+            DESTINATION "share/pixmaps/")
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux.png
+            DESTINATION "share/icons/hicolor/128x128/apps")
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/supertux2.desktop.in ${CMAKE_BINARY_DIR}/supertux2.desktop)
     install(FILES ${CMAKE_BINARY_DIR}/supertux2.desktop DESTINATION "share/applications")
 
@@ -77,11 +73,7 @@ if(EMSCRIPTEN)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/mk/emscripten/template.html.in ${CMAKE_CURRENT_BINARY_DIR}/template.html)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/mk/emscripten/supertux2.png ${CMAKE_CURRENT_BINARY_DIR}/supertux2.png COPYONLY)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/mk/emscripten/supertux2_bkg.png ${CMAKE_CURRENT_BINARY_DIR}/supertux2_bkg.png COPYONLY)
-  if(IS_SUPERTUX_RELEASE)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux.ico ${CMAKE_CURRENT_BINARY_DIR}/supertux2.ico COPYONLY)
-  else()
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux-nightly.ico ${CMAKE_CURRENT_BINARY_DIR}/supertux2.ico COPYONLY)
-  endif()
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/data/images/engine/icons/supertux.ico ${CMAKE_CURRENT_BINARY_DIR}/supertux2.ico COPYONLY)
 endif()
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/README.md
