@@ -35,18 +35,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The apt version of Cppcheck is outdated and apparently there are no
-      # alternative up-to-date precompiled versions for Ubuntu,
-      # so we compile it ourselves here.
+      # Compile the latest Cppcheck source. Download to a file first so a
+      # truncated HTTP response cannot be hidden by a successful tar pipeline.
       - name: Install Cppcheck
         run: |
+          set -euo pipefail
           sudo apt-get update
-          sudo apt-get install g++ make
+          sudo apt-get install -y g++ make curl jq
+
           RELEASE_API_URL="https://api.github.com/repos/danmar/cppcheck/releases/latest"
-          TARBALL_URL=$(curl --silent "$RELEASE_API_URL" | jq --raw-output '.tarball_url')
-          curl --location --silent "$TARBALL_URL" | tar --extract --gzip --file=-
-          cd danmar-cppcheck-*/
-          make -j"$(nproc)" CXXFLAGS="-O1 -DNDEBUG"
+          curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
+            "$RELEASE_API_URL" -o cppcheck-release.json
+          TARBALL_URL=$(jq --exit-status --raw-output \
+            '.tarball_url | select(type == "string" and length > 0)' cppcheck-release.json)
+
+          curl --fail --location --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
+            "$TARBALL_URL" -o cppcheck.tar.gz
+          tar --extract --gzip --file=cppcheck.tar.gz
+
+          CPPHECK_SOURCE_DIR=$(find . -maxdepth 1 -type d -name 'danmar-cppcheck-*' -print -quit)
+          test -n "$CPPHECK_SOURCE_DIR"
+          make -C "$CPPHECK_SOURCE_DIR" -j"$(nproc)" CXXFLAGS="-O1 -DNDEBUG"
 
       - name: Lint code with Cppcheck
         run: |
