@@ -40,7 +40,7 @@ jobs:
   wasm:
     # PRs need one Release build for the real-browser smoke test. Keep the
     # Debug build for main/tag builds, but don't consume a second PR runner.
-    if: github.event_name != 'pull_request' || matrix.build_type == 'Release'
+    if: (github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch') || matrix.build_type == 'Release'
     strategy:
       fail-fast: false
       matrix:
