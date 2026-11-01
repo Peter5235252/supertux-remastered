@@ -63,7 +63,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # SUPERTUX_VERSION is set later using git describe.
-      SDL_TAG: 3.4.12
       B_T_VERSION: 35.0.0
       NDK_VERSION: 29.0.14206865
       SDK_VERSION: 35
@@ -82,6 +81,18 @@ jobs:
           echo "SUPERTUX_VERSION=$tag" >> $GITHUB_ENV
           echo "SUPERTUX_VERSION: $tag"
 
+      - name: Select Android vcpkg triplet
+        run: |
+          case "${{ matrix.arch }}" in
+            arm64-v8a) VCPKG_TRIPLET=arm64-android ;;
+            armeabi-v7a) VCPKG_TRIPLET=arm-neon-android ;;
+            x86) VCPKG_TRIPLET=x86-android ;;
+            x86_64) VCPKG_TRIPLET=x64-android ;;
+            *) echo "Unsupported Android ABI: ${{ matrix.arch }}"; exit 67 ;;
+          esac
+          echo "VCPKG_TRIPLET=$VCPKG_TRIPLET" >> "$GITHUB_ENV"
+          echo "Android ABI ${{ matrix.arch }} uses $VCPKG_TRIPLET"
+
       - name: Use cached dependencies
         id: cache-dependencies
         uses: actions/cache@v4
@@ -92,14 +103,6 @@ jobs:
       - name: Bootstrap custom vcpkg
         if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run: |
-          case "${{ matrix.arch }}" in
-            arm64-v8a) export VCPKG_TRIPLET=arm64-android ;;
-            armeabi-v7a) export VCPKG_TRIPLET=arm-neon-android ;;
-            x86) export VCPKG_TRIPLET=x86-android ;;
-            x86_64) export VCPKG_TRIPLET=x64-android ;;
-            *) exit 67 ;;
-          esac
-          echo "VCPKG_TRIPLET=$VCPKG_TRIPLET" >> $GITHUB_ENV
           echo "VCPKG_ROOT=$VCPKG_ROOT" >> $GITHUB_ENV
 
           git clone https://github.com/microsoft/vcpkg.git $VCPKG_ROOT
@@ -127,10 +130,31 @@ jobs:
 
           find $VCPKG_ROOT/installed -name '*.pc' -exec sed -i -E 's/-lc\+\+//g' {} \;
 
+      - name: Match SDL Android project to the native vcpkg SDL
+        run: |
+          SDL_HEADER="$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include/SDL3/SDL_version.h"
+          test -f "$SDL_HEADER" || {
+            echo "error: SDL version header not found: $SDL_HEADER"
+            exit 1
+          }
+
+          SDL_MAJOR=$(awk '$2 == "SDL_MAJOR_VERSION" { print $3; exit }' "$SDL_HEADER")
+          SDL_MINOR=$(awk '$2 == "SDL_MINOR_VERSION" { print $3; exit }' "$SDL_HEADER")
+          SDL_MICRO=$(awk '$2 == "SDL_MICRO_VERSION" { print $3; exit }' "$SDL_HEADER")
+          SDL_TAG="$SDL_MAJOR.$SDL_MINOR.$SDL_MICRO"
+
+          if [[ -z "$SDL_MAJOR" || -z "$SDL_MINOR" || -z "$SDL_MICRO" ]]; then
+            echo "error: failed to read SDL version from $SDL_HEADER"
+            exit 1
+          fi
+
+          echo "SDL_TAG=$SDL_TAG" >> "$GITHUB_ENV"
+          echo "Native SDL version: $SDL_TAG"
+
       - name: Prepare SDL Android project
         run: |
-          # Has to be the same version as the one found in vcpkg!!
-          ./tools/bootstrap-android-project.sh ${SDL_TAG}
+          # Match the Java SDLActivity classes to the native SDL library.
+          ./tools/bootstrap-android-project.sh "${SDL_TAG}"
 
           echo "vcpkg_root=$VCPKG_ROOT" > mk/android/local.properties
 
