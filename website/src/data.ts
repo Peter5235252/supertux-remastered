@@ -167,8 +167,8 @@ export const FAQS = [
     a: 'These are rolling, unsigned test builds made by a single hobbyist. Windows SmartScreen may show a warning — choose “More info” then “Run anyway” only if you trust the source. The macOS build may need a right-click → Open the first time. Every asset is downloadable from the GitHub release, so you can inspect it before running.',
   },
   {
-    q: 'What are the Android requirements?',
-    a: 'Android devices need at least 6 GB of RAM. 8 GB of RAM is recommended.',
+    q: 'What are the desktop and Android system requirements?',
+    a: 'Both desktop and Android builds need at least 6 GB of RAM. 8 GB of RAM is recommended.',
   },
   {
     q: 'What are the Linux requirements?',

@@ -298,7 +298,7 @@ export function Install() {
               <ul>
                 <li><span>OS</span><span>{meta.name} 64-bit</span></li>
                 <li><span>GPU</span><span>{meta.backend} capable</span></li>
-                <li><span>RAM</span><span>4 GB minimum</span></li>
+                <li><span>RAM</span><span>6 GB minimum · 8 GB recommended</span></li>
                 <li><span>Disk</span><span>~650 MB installed</span></li>
                 <li><span>Input</span><span>Keyboard + gamepad</span></li>
               </ul>

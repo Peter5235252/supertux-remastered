@@ -52,12 +52,10 @@ cd installer && cargo build --release
 
 The command-line instructions below are still fully supported.
 
-## Android requirements
+## System requirements
 
-- **Minimum: 6 GB RAM.**
-- **Recommended: 8 GB RAM.**
-
-These memory requirements apply to Android devices; desktop requirements are listed separately on the website.
+- **Desktop:** 6 GB RAM minimum; 8 GB recommended.
+- **Android:** 6 GB RAM minimum; 8 GB recommended.
 
 ## Download and play (test builds)
 
