@@ -118,6 +118,12 @@ jobs:
         if: matrix.build_type == 'Release'
         run: |
           cp web/supertux-shell.html build/supertux2.html
+          mkdir -p build/shots build/brand
+          cp website/public/shots/night-chill.webp build/shots/
+          cp website/public/shots/crystal-mine.webp build/shots/
+          cp website/public/shots/journey-begins.webp build/shots/
+          cp website/public/shots/ancient-ruin.webp build/shots/
+          cp website/public/brand/supertux-logo.png build/brand/
           split -b 50M -a 2 build/supertux2.data build/supertux2.data.part
           chunk_count=$(find build -maxdepth 1 -type f -name 'supertux2.data.part??' | wc -l)
           printf '%s\n' "$chunk_count" > build/supertux2.data.parts
