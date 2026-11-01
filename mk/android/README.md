@@ -1,5 +1,12 @@
 # Android
 
+## Device memory requirements
+
+- **Minimum: 6 GB RAM.**
+- **Recommended: 8 GB RAM.**
+
+These are the project's published RAM requirements for Android devices.
+
 Good luck.
 
 - We have `tools/bootstrap-android-project.sh`, you can pass it with the SDL

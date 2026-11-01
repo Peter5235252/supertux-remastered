@@ -167,6 +167,10 @@ export const FAQS = [
     a: 'These are rolling, unsigned test builds made by a single hobbyist. Windows SmartScreen may show a warning — choose “More info” then “Run anyway” only if you trust the source. The macOS build may need a right-click → Open the first time. Every asset is downloadable from the GitHub release, so you can inspect it before running.',
   },
   {
+    q: 'What are the Android requirements?',
+    a: 'Android devices need at least 6 GB of RAM. 8 GB of RAM is recommended.',
+  },
+  {
     q: 'What are the Linux requirements?',
     a: 'A 64-bit x86_64 Linux desktop with a Vulkan-capable GPU and driver, plus SDL3, SDL3_image, SDL3_ttf and OpenAL system libraries. On Arch and CachyOS those are sdl3, sdl3_image, sdl3_ttf and openal. The installer checks for the common pieces and tells you what is missing before it starts.',
   },
