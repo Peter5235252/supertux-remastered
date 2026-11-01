@@ -778,7 +778,7 @@
     const stageOrder = ['data', 'engine', 'renderer'];
 
     function setStage(stage) {
-      const current = stageOrder.indexOf(stage);
+      const current = stage === 'finished' ? stageOrder.length : stageOrder.indexOf(stage);
       stageElements.forEach((element) => {
         const index = stageOrder.indexOf(element.dataset.stage);
         element.classList.toggle('is-active', index === current);
@@ -1110,15 +1110,16 @@
       },
 
       setStatus: (status) => {
-        const match = status.match(/\((\d+)\/(\d+)\)/);
+        const statusText = String(status || '');
+        const match = statusText.match(/\((\d+)\/(\d+)\)/);
         if (match) {
           const loaded = Number(match[1]);
           const total = Number(match[2]);
           const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
           setStage('engine');
           setProgress(36 + Math.round(pct * .28), 'Loading game engine', 'Preparing packaged game resources · ' + pct + '%');
-        } else if (status) {
-          loadingDetail.textContent = status;
+        } else if (statusText) {
+          loadingDetail.textContent = statusText;
         }
       },
 
