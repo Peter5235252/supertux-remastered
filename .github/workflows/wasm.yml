@@ -112,6 +112,44 @@ jobs:
             exit 1
           fi
 
+      - name: Install Chromium for WebGPU runtime tests
+        if: matrix.build_type == 'Release'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mesa-vulkan-drivers
+          mkdir -p build/node
+          npm install --prefix build/node playwright-core@1.63.0 --no-audit --no-fund
+          build/node/node_modules/.bin/playwright-core install --with-deps chromium
+          mkdir -p build/external
+          ln -s "$GITHUB_WORKSPACE/build/node" "$GITHUB_WORKSPACE/build/external/node"
+
+      - name: Test XDL_wgpu in headless Chromium
+        if: matrix.build_type == 'Release'
+        run: |
+          source ~/emsdk/emsdk_env.sh
+          node external/XDL_wgpu/tools/run-test.mjs "$GITHUB_WORKSPACE/build/external/XDL_wgpu"
+
+      - name: Test SuperTux startup and first frame in headless Chromium
+        if: matrix.build_type == 'Release'
+        run: |
+          cp web/supertux-shell.html build/supertux2.html
+          mkdir -p build/shader
+          cp build/data/shader/*.wgsl build/shader/
+          split -b 50M -a 2 build/supertux2.data build/supertux2.data.part
+          chunk_count=$(find build -maxdepth 1 -type f -name 'supertux2.data.part??' | wc -l)
+          printf '%s\\n' "$chunk_count" > build/supertux2.data.parts
+          node web/run-wasm-smoke.mjs "$GITHUB_WORKSPACE/build"
+
+      - name: Upload browser smoke diagnostics
+        if: failure() && matrix.build_type == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-browser-smoke-diagnostics
+          path: |
+            build/browser-smoke.log
+            build/browser-smoke.png
+          if-no-files-found: ignore
+
       - name: Setup files for upload
         working-directory: build
         env:
