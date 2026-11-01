@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "math/util.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
 #include "util/log.hpp"
@@ -145,7 +146,7 @@ set_blend_mode(Blend blend)
       break;
     case Blend::MOD:
       glEnable(GL_BLEND);
-      glBlendFunc(GL_DST_COLOR, GL_ZERO);
+      glBlendFuncSeparate(GL_DST_COLOR, GL_ZERO, GL_DST_ALPHA, GL_ZERO);
       break;
   }
   glBlendEquation(GL_FUNC_ADD);

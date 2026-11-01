@@ -214,13 +214,13 @@ if(NOT EMSCRIPTEN)
 else()
   include(SuperTux/Emscripten)
 
-  # Reuse the SDL3 and SDL3_image source trees pinned by XDL_wgpu, but do
-  # not build or link its WebGPU compatibility renderer for the WASM game.
+  # Reuse the SDL3 and SDL3_image source trees pinned by the external
+  # graphics helper repository; the WASM game uses its own WebGL 2 renderer.
   set(XDL_BUILD_TEST OFF CACHE BOOL "" FORCE)
   set(XDL_BUILD_SDL_LIBRARIES OFF CACHE BOOL "" FORCE)
   add_subdirectory(external/XDL_wgpu EXCLUDE_FROM_ALL)
 
-  # Build SDL3_image against the exact SDL3 source tree used by XDL_wgpu.
+  # Build SDL3_image against the exact SDL3 source tree used by that repository.
   # Importing the vcpkg package here would define a second SDL3 target set.
   set(SDLIMAGE_VENDORED OFF CACHE BOOL "" FORCE)
   set(SDLIMAGE_STRICT ON CACHE BOOL "" FORCE)

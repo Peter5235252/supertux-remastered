@@ -10,6 +10,7 @@
 
 #include <SDL3/SDL.h>
 
+#include <cstddef>
 #include <memory>
 #include <vector>
 
