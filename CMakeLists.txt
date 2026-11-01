@@ -216,7 +216,8 @@ else()
 
   # Stock Emscripten SDL3 has no SDL_GPU WebGPU backend. XDL_wgpu provides
   # the SDL_GPU implementation on top of emdawnwebgpu.
-  set(XDL_BUILD_TEST OFF CACHE BOOL "" FORCE)
+  set(XDL_BUILD_TEST ON CACHE BOOL "" FORCE)
+  # Build XDL_wgpu's real browser smoke test alongside the game.
   add_subdirectory(external/XDL_wgpu EXCLUDE_FROM_ALL)
 
   # Build SDL3_image against the exact SDL3 source tree used by XDL_wgpu.
