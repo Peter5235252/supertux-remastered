@@ -44,7 +44,8 @@ jobs:
           sudo apt-get install -y g++ make curl jq
 
           RELEASE_API_URL="https://api.github.com/repos/danmar/cppcheck/releases/latest"
-          curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
+          # GitHub currently redirects this endpoint, so follow the 301.
+          curl --fail --location --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
             "$RELEASE_API_URL" -o cppcheck-release.json
           TARBALL_URL=$(jq --exit-status --raw-output \
             '.tarball_url | select(type == "string" and length > 0)' cppcheck-release.json)
