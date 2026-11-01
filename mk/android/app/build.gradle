@@ -9,6 +9,7 @@ if (rootProject.file("${rootDir}/local.properties").exists()) {
 
 final APP_ID = "org.supertux.supertux2"
 final TARGET_SDK = 35
+final MIN_SDK = 28
 
 android {
     namespace APP_ID
@@ -19,7 +20,7 @@ android {
         targetSdkVersion TARGET_SDK
 
         // The current SDL3/vcpkg Android build depends on system iconv from Android 9.
-        minSdkVersion 28
+        minSdkVersion MIN_SDK
 
         // NOTE: Don't forget to bump the version code!
         versionCode 7
@@ -28,7 +29,7 @@ android {
         ndkVersion "29.0.14206865"
         externalNativeBuild {
             cmake {
-                arguments "-DANDROID_PLATFORM=android-" + android.compileSdk.toString(),
+                arguments "-DANDROID_PLATFORM=android-" + MIN_SDK.toString(),
                           "-DCMAKE_VERBOSE_MAKEFILE=On",
                           "-DANDROID_STL=c++_shared",
                           "-DANDROID=On",
