@@ -214,12 +214,13 @@ if(NOT EMSCRIPTEN)
 else()
   include(SuperTux/Emscripten)
 
-  # Stock Emscripten SDL3 has no SDL_GPU WebGPU backend. XDL_wgpu provides
-  # the SDL_GPU implementation on top of emdawnwebgpu.
+  # Reuse the SDL3 and SDL3_image source trees pinned by the external
+  # graphics helper repository; the WASM game uses its own WebGL 2 renderer.
   set(XDL_BUILD_TEST OFF CACHE BOOL "" FORCE)
+  set(XDL_BUILD_SDL_LIBRARIES OFF CACHE BOOL "" FORCE)
   add_subdirectory(external/XDL_wgpu EXCLUDE_FROM_ALL)
 
-  # Build SDL3_image against the exact SDL3 source tree used by XDL_wgpu.
+  # Build SDL3_image against the exact SDL3 source tree used by that repository.
   # Importing the vcpkg package here would define a second SDL3 target set.
   set(SDLIMAGE_VENDORED OFF CACHE BOOL "" FORCE)
   set(SDLIMAGE_STRICT ON CACHE BOOL "" FORCE)
@@ -278,8 +279,20 @@ endif()
 ## Build list of sources for supertux binary
 set(SUPERTUX_SOURCES_C ${CMAKE_CURRENT_SOURCE_DIR})
 
-file(GLOB SUPERTUX_SOURCES_CXX RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CONFIGURE_DEPENDS src/*/*.cpp src/supertux/menu/*.cpp src/video/null/*.cpp src/video/gpu/*.cpp)
-file(GLOB SUPERTUX_SOURCES_HXX RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CONFIGURE_DEPENDS  src/*/*.hpp src/supertux/menu/*.hpp src/video/null/*.hpp src/video/gpu/*.hpp)
+if(EMSCRIPTEN)
+  # WASM uses its own GLES 3.0 / WebGL 2 renderer. Never compile SDL_GPU
+  # sources into the browser build.
+  file(GLOB SUPERTUX_SOURCES_CXX RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CONFIGURE_DEPENDS
+    src/*/*.cpp src/supertux/menu/*.cpp src/video/null/*.cpp src/video/webgl/*.cpp)
+  file(GLOB SUPERTUX_SOURCES_HXX RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CONFIGURE_DEPENDS
+    src/*/*.hpp src/supertux/menu/*.hpp src/video/null/*.hpp src/video/webgl/*.hpp)
+else()
+  # Native builds continue to use the existing SDL_GPU renderer unchanged.
+  file(GLOB SUPERTUX_SOURCES_CXX RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CONFIGURE_DEPENDS
+    src/*/*.cpp src/supertux/menu/*.cpp src/video/null/*.cpp src/video/gpu/*.cpp)
+  file(GLOB SUPERTUX_SOURCES_HXX RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CONFIGURE_DEPENDS
+    src/*/*.hpp src/supertux/menu/*.hpp src/video/null/*.hpp src/video/gpu/*.hpp)
+endif()
 file(GLOB SUPERTUX_RESOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CONFIGURE_DEPENDS "${PROJECT_BINARY_DIR}/tmp/*.rc")
 
 ## Sort source lists to have deterministic linking order
@@ -370,11 +383,6 @@ endif()
 
 target_include_directories(supertux2 PUBLIC ${CMAKE_BINARY_DIR} src/)
 
-if(EMSCRIPTEN)
-  # Link XDL_wgpu before every other library so its SDL_GPU symbols are
-  # selected before the stock SDL3 port's empty GPU backend.
-  target_link_libraries(supertux2 PUBLIC XDL_wgpu)
-endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD|NetBSD")
   target_link_options(supertux2 PUBLIC -lexecinfo)
@@ -385,7 +393,7 @@ if(WIN32)
 endif()
 
 if(EMSCRIPTEN)
-  target_link_options(supertux2 PUBLIC --use-port=emdawnwebgpu PUBLIC -sEXPORTED_FUNCTIONS=['_main','_set_resolution','_save_config','_onDownloadProgress','_onDownloadFinished','_onDownloadError','_onDownloadAborted','_getExceptionMessage'] PUBLIC -sEXPORTED_RUNTIME_METHODS=['ccall','cwrap'])
+  target_link_options(supertux2 PUBLIC -sEXPORTED_FUNCTIONS=['_main','_set_resolution','_save_config','_onDownloadProgress','_onDownloadFinished','_onDownloadError','_onDownloadAborted','_getExceptionMessage'] PUBLIC -sEXPORTED_RUNTIME_METHODS=['ccall','cwrap'])
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   # This option makes symbol names available for libc's backtrace().
   target_link_options(supertux2 PUBLIC -rdynamic)
@@ -429,15 +437,11 @@ target_link_libraries(supertux2 PUBLIC
   PartioZip OpenAL FindLocale obstack glm fmt PhysFS)
 target_compile_definitions(supertux2 PUBLIC GLM_ENABLE_EXPERIMENTAL)
 if(EMSCRIPTEN)
-  # Keep the linker map and symbol trace for the CI backend-selection check.
+  # Retain Asyncify for browser-facing asynchronous operations.
   target_link_options(supertux2 PUBLIC
     -sASYNCIFY
-    # Asyncify's spill stack is separate from the native C/C++ stack. WebGPU fence waits
-    # yield through SDL_DelayNS()/emscripten_sleep(), preserving this full C++ call chain.
     -sASYNCIFY_STACK_SIZE=1048576
     -sSTACK_SIZE=1048576
-    -Wl,--trace-symbol=SDL_CreateGPUDevice
-    -Wl,-Map=${CMAKE_BINARY_DIR}/supertux2.map
   )
 endif()
 if(NOT EMSCRIPTEN)

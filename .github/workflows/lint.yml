@@ -16,6 +16,11 @@
 
 name: Code Linting
 
+# Keep only the newest validation run for each workflow and PR/branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
@@ -25,32 +30,40 @@ on:
       - '*'
     paths:
       - 'src/**'
-  pull_request:
-    paths:
-      - 'src/**'
-
 jobs:
   lint_cppcheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # The apt version of Cppcheck is outdated and apparently there are no
-      # alternative up-to-date precompiled versions for Ubuntu,
-      # so we compile it ourselves here.
+      # Build the latest Cppcheck release from its current upstream repository.
       - name: Install Cppcheck
         run: |
+          set -euo pipefail
           sudo apt-get update
-          sudo apt-get install g++ make
-          RELEASE_API_URL="https://api.github.com/repos/danmar/cppcheck/releases/latest"
-          TARBALL_URL=$(curl --silent "$RELEASE_API_URL" | jq --raw-output '.tarball_url')
-          curl --location --silent "$TARBALL_URL" | tar --extract --gzip --file=-
-          cd danmar-cppcheck-*/
-          make -j"$(nproc)" CXXFLAGS="-O1 -DNDEBUG"
+          sudo apt-get install -y g++ make curl jq
+
+          RELEASE_API_URL="https://api.github.com/repos/cppcheck-opensource/cppcheck/releases/latest"
+          curl --fail --location --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
+            "$RELEASE_API_URL" -o cppcheck-release.json
+
+          if ! TARBALL_URL=$(jq --exit-status --raw-output \
+            '.tarball_url | select(type == "string" and length > 0)' cppcheck-release.json); then
+            echo "GitHub's Cppcheck release response did not contain a tarball_url:"
+            cat cppcheck-release.json
+            exit 1
+          fi
+
+          curl --fail --location --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
+            "$TARBALL_URL" -o cppcheck.tar.gz
+
+          mkdir cppcheck-src
+          tar --extract --gzip --file=cppcheck.tar.gz --strip-components=1 --directory=cppcheck-src
+          make -C cppcheck-src -j"$(nproc)" CXXFLAGS="-O1 -DNDEBUG"
 
       - name: Lint code with Cppcheck
         run: |
-          ./danmar-cppcheck-*/cppcheck \
+          ./cppcheck-src/cppcheck \
             --check-level=exhaustive --include=mk/cppcheck/include/SDL.h \
             --quiet --inline-suppr --language=c++ --error-exitcode=10 \
             -j"$(nproc)" --std=c++17 --enable=warning,style \

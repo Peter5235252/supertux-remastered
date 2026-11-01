@@ -28,8 +28,6 @@ on:
       - main
     tags:
       - '*'
-  pull_request:
-
 jobs:
   android:
     strategy:

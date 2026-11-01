@@ -41,6 +41,7 @@
 #include "supertux/screen_fade.hpp"
 #include "supertux/sector.hpp"
 #include "util/log.hpp"
+#include "port/emscripten_log.hpp"
 #include "video/compositor.hpp"
 #include "video/drawing_context.hpp"
 
@@ -716,6 +717,14 @@ void ScreenManager::loop_iter()
     // Draw a frame
     Compositor compositor(m_video_system, g_config->frame_prediction ? time_offset : 0.0f);
     draw(compositor, *m_fps_statistics);
+#ifdef __EMSCRIPTEN__
+    static bool wasm_first_frame_reported = false;
+    if (!wasm_first_frame_reported)
+    {
+      wasm_first_frame_reported = true;
+      supertux_wasm_phase("FIRST_FRAME_RENDERED");
+    }
+#endif
     m_fps_statistics->report_frame();
     autotest_note_frame_drawn();
   }
@@ -741,10 +750,13 @@ static void g_loop_iter() {
 void
 ScreenManager::run()
 {
+  supertux_wasm_phase("ScreenManager::run: initializing integrations");
   Integration::init_all();
+  supertux_wasm_phase("ScreenManager::run: integrations initialized");
 
   handle_screen_switch();
 #ifdef __EMSCRIPTEN__
+  supertux_wasm_phase("ScreenManager::run: registering browser main loop");
   emscripten_set_main_loop(g_loop_iter, -1, 1);
 #else
   while (!m_screen_stack.empty()) {
