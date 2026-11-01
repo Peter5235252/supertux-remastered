@@ -137,7 +137,7 @@ VideoSystem::get_available_video_systems()
   // Display the real native backend. The stored value remains VIDEO_GPU.
   const std::string backend = gpu_backend_display_name();
   output.push_back({ VIDEO_GPU, backend,
-    _("Hardware-accelerated native renderer with 4K HD textures and HDR output. Active backend: ") + backend + "." });
+    _("Hardware-accelerated native SDL_GPU renderer with mipmapped texture filtering. Active backend: ") + backend + "." });
 #endif
   return output;
 }
