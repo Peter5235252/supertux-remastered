@@ -268,7 +268,10 @@ WebGLPainter::draw_vertices(Blend blend, bool lines, const WebGLTexture* texture
                             const Vector& animate, const float* data,
                             size_t float_count)
 {
-  if (!texture || !texture->get_handle() || float_count == 0)
+  // The current GPU renderer has no render-target implementation for its
+  // lightmap pass yet. Match that behavior: only the screen renderer submits
+  // geometry until an offscreen WebGL target is added.
+  if (!m_is_screen || !texture || !texture->get_handle() || float_count == 0)
     return;
 
   m_video_system.draw_vertices(data, float_count, *texture, blend, lines,

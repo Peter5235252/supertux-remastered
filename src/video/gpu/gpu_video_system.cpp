@@ -24,7 +24,6 @@
 
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
-#include "port/emscripten_log.hpp"
 #include "util/log.hpp"
 #include "video/blend.hpp"
 #include "video/gpu/gpu_pipeline.hpp"
@@ -84,19 +83,15 @@ GPUVideoSystem::GPUVideoSystem() :
   m_post_format(SDL_GPU_TEXTUREFORMAT_INVALID),
   m_hdr_active(false)
 {
-  supertux_wasm_phase("GPUVideoSystem: creating SDL window");
   create_sdl_window(0);
-  supertux_wasm_phase("GPUVideoSystem: SDL window created");
 
   // Native backend per OS: Metal on macOS, Direct3D 12 on Windows with a
   // Vulkan fallback for machines without D3D12, Vulkan on Linux,
   // WebGPU on Emscripten/WASM.
   // (SDL_GPU has no Direct3D 11 backend, so D3D11 is not an option.)
 #if defined(__EMSCRIPTEN__)
-  supertux_wasm_phase("GPUVideoSystem: requesting WebGPU device");
   SDL_SetHint(SDL_HINT_GPU_DRIVER, "webgpu");
   m_device.reset(SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_WGSL, true, nullptr));
-  supertux_wasm_phase("GPUVideoSystem: WebGPU device request returned");
 #elif defined(__APPLE__)
   SDL_SetHint(SDL_HINT_GPU_DRIVER, "metal");
   m_device.reset(SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_MSL, true, nullptr));
@@ -123,7 +118,6 @@ GPUVideoSystem::GPUVideoSystem() :
   }
   log_info << "SDL_GPU driver: " << SDL_GetGPUDeviceDriver(m_device.get()) << std::endl;
 
-  supertux_wasm_phase("GPUVideoSystem: claiming SDL window for WebGPU");
   if (!SDL_ClaimWindowForGPUDevice(m_device.get(), m_sdl_window.get()))
   {
     std::ostringstream msg;
@@ -132,12 +126,9 @@ GPUVideoSystem::GPUVideoSystem() :
     throw std::runtime_error(msg.str());
   }
 
-  supertux_wasm_phase("GPUVideoSystem: SDL window claimed");
   m_texture_manager.reset(new TextureManager);
-  supertux_wasm_phase("GPUVideoSystem: TextureManager initialized");
   m_renderer.reset(new GPURenderer(*this, true));
   m_lightmap.reset(new GPURenderer(*this, false));
-  supertux_wasm_phase("GPUVideoSystem: renderers initialized");
 
   SDL_GPUBufferCreateInfo vbuf_info{};
   vbuf_info.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
@@ -155,9 +146,7 @@ GPUVideoSystem::GPUVideoSystem() :
 
   const SDL_GPUTextureFormat target_format =
     SDL_GetGPUSwapchainTextureFormat(m_device.get(), m_sdl_window.get());
-  supertux_wasm_phase("GPUVideoSystem: creating render pipelines");
   m_pipelines.reset(new GPUPipeline(m_device.get(), target_format));
-  supertux_wasm_phase("GPUVideoSystem: render pipelines created");
 
   auto make_solid = [this](Uint8 fill) {
     SDLSurfacePtr surface = SDLSurface::create_rgba(1, 1);
@@ -165,15 +154,10 @@ GPUVideoSystem::GPUVideoSystem() :
     TexturePtr tex(new GPUTexture(this, *surface, Sampler()));
     return tex;
   };
-  supertux_wasm_phase("GPUVideoSystem: uploading white 1x1 texture");
   m_white_texture = make_solid(0xFF);
-  supertux_wasm_phase("GPUVideoSystem: white 1x1 texture uploaded");
   m_clear_texture = make_solid(0x00);
-  supertux_wasm_phase("GPUVideoSystem: clear 1x1 texture uploaded");
 
-  supertux_wasm_phase("GPUVideoSystem: applying video configuration");
   apply_config();
-  supertux_wasm_phase("GPUVideoSystem: initialization complete");
 }
 
 GPUVideoSystem::~GPUVideoSystem()

@@ -21,7 +21,6 @@
 #include <SDL3/SDL.h>
 
 #include "util/log.hpp"
-#include "port/emscripten_log.hpp"
 #include "video/gpu/gpu_video_system.hpp"
 #include "video/sampler.hpp"
 
@@ -115,12 +114,6 @@ GPUTexture::create_sampler()
 void
 GPUTexture::upload(const SDL_Surface& image)
 {
-#ifdef __EMSCRIPTEN__
-  static unsigned int wasm_upload_count = 0;
-  const unsigned int wasm_upload_id = ++wasm_upload_count;
-  if (wasm_upload_id <= 8)
-    EM_ASM({ console.info("[superTux][texture] upload " + $0 + ": begin"); }, wasm_upload_id);
-#endif
   if (m_handle)
   {
     SDL_ReleaseGPUTexture(m_device, m_handle);
@@ -212,10 +205,6 @@ GPUTexture::upload(const SDL_Surface& image)
   if (converted)
     SDL_DestroySurface(converted);
 
-#ifdef __EMSCRIPTEN__
-  if (wasm_upload_id <= 8)
-    EM_ASM({ console.info("[superTux][texture] upload " + $0 + ": acquiring command buffer"); }, wasm_upload_id);
-#endif
   SDL_GPUCommandBuffer* cmd = SDL_AcquireGPUCommandBuffer(m_device);
   if (!cmd)
   {
@@ -249,22 +238,10 @@ GPUTexture::upload(const SDL_Surface& image)
   if (info.num_levels > 1)
     SDL_GenerateMipmapsForGPUTexture(cmd, m_handle);
 
-#ifdef __EMSCRIPTEN__
-  if (wasm_upload_id <= 8)
-    EM_ASM({ console.info("[superTux][texture] upload " + $0 + ": submitting GPU upload"); }, wasm_upload_id);
-#endif
   SDL_GPUFence* fence = SDL_SubmitGPUCommandBufferAndAcquireFence(cmd);
   if (fence)
   {
-#ifdef __EMSCRIPTEN__
-    if (wasm_upload_id <= 8)
-      EM_ASM({ console.info("[superTux][texture] upload " + $0 + ": waiting for GPU fence"); }, wasm_upload_id);
-#endif
     SDL_WaitForGPUFences(m_device, true, &fence, 1);
-#ifdef __EMSCRIPTEN__
-    if (wasm_upload_id <= 8)
-      EM_ASM({ console.info("[superTux][texture] upload " + $0 + ": GPU fence completed"); }, wasm_upload_id);
-#endif
     SDL_ReleaseGPUFence(m_device, fence);
   }
   SDL_ReleaseGPUTransferBuffer(m_device, transfer);

@@ -617,7 +617,7 @@ Main::launch_game(const CommandLineArguments& args)
 
   m_video_system = VideoSystem::create(video);
 #else
-  // WebAssembly uses the WebGPU renderer via SDL_GPU.
+  // WebAssembly uses the dedicated WebGL 2 renderer.
   m_video_system = VideoSystem::create(VideoSystem::VIDEO_GPU);
 #endif
   supertux_wasm_phase("launch_game: VideoSystem constructed");

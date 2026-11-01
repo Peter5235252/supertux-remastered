@@ -37,7 +37,7 @@ class VideoSystem : public Currenton<VideoSystem>
 {
 public:
   enum Enum {
-    // SDL_GPU (native Vulkan on Linux/Windows) is the only renderer.
+    // Native builds use SDL_GPU; browser builds map VIDEO_GPU to WebGL 2.
     // VIDEO_NULL exists for headless tooling and tests.
     VIDEO_GPU,
     VIDEO_NULL
