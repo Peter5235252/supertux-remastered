@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, CheckCircle2, Download, FileUp, LoaderCircle, Smartphone, Usb, X } from 'lucide-react'
 import { RELEASE, RELEASES_URL } from '../data'
 
@@ -193,6 +193,8 @@ export function AndroidUsbInstaller() {
   const transportRef = useRef<AdbTransport | null>(null)
   const localFileRef = useRef<HTMLInputElement | null>(null)
 
+  const [modules, setModules] = useState<BrowserAdbModules | null>(null)
+  const [modulesError, setModulesError] = useState('')
   const [connecting, setConnecting] = useState(false)
   const [installing, setInstalling] = useState(false)
   const [deviceName, setDeviceName] = useState('')
@@ -210,25 +212,52 @@ export function AndroidUsbInstaller() {
     typeof navigator !== 'undefined' &&
     'usb' in navigator
 
+  useEffect(() => {
+    if (!browserSupported) return
+    let active = true
+    setPhase('Preparing the browser ADB installer…')
+
+    void loadAdbModules()
+      .then((loaded) => {
+        if (active) {
+          setModules(loaded)
+          setPhase('ADB is ready. Connect your Android phone over USB.')
+        }
+      })
+      .catch((cause: unknown) => {
+        if (active) setModulesError(errorMessage(cause))
+      })
+
+    return () => {
+      active = false
+    }
+  }, [browserSupported])
+
   const compatibleBuild = findCompatibleBuild(abiList)
   const canInstall = Boolean(adbRef.current && (selectedFile || compatibleBuild) && !installing)
 
   async function connectDevice() {
+    const activeModules = modules
+    if (!activeModules) {
+      setError(modulesError || 'The browser ADB client is still loading. Try again in a moment.')
+      return
+    }
+
     setConnecting(true)
     setError('')
     setInstalled(false)
-    setPhase('Loading the browser ADB client…')
 
     try {
-      const modules = await loadAdbModules()
-      const manager = modules.webusb.AdbDaemonWebUsbDeviceManager.BROWSER
+      const manager = activeModules.webusb.AdbDaemonWebUsbDeviceManager.BROWSER
       if (!manager) {
         throw new Error('WebUSB is unavailable. Open this page over HTTPS in desktop Chrome or Microsoft Edge.')
       }
 
+      // Open the USB picker immediately during this click event. Awaiting a
+      // network/module load first would lose WebUSB's required user activation.
       setPhase('Choose your Android phone in the USB device picker…')
-      // requestDevice must be invoked from this click handler to satisfy WebUSB user activation.
-      const backend = await manager.requestDevice()
+      const deviceRequest = manager.requestDevice()
+      const backend = await deviceRequest
       if (!backend) {
         setPhase('No device selected.')
         return
@@ -238,15 +267,15 @@ export function AndroidUsbInstaller() {
       const connection = await backend.connect()
 
       setPhase('Waiting for USB debugging authorization on your phone…')
-      const credentialStore = new modules.credentials.default('SuperTux Remastered')
-      const transport = await modules.adb.AdbDaemonTransport.authenticate({
+      const credentialStore = new activeModules.credentials.default('SuperTux Remastered')
+      const transport = await activeModules.adb.AdbDaemonTransport.authenticate({
         serial: backend.serial,
         connection,
         credentialStore,
       })
       transportRef.current = transport
 
-      const adb = new modules.adb.Adb(transport)
+      const adb = new activeModules.adb.Adb(transport)
       adbRef.current = adb
 
       setPhase('Reading device information…')
@@ -320,8 +349,9 @@ export function AndroidUsbInstaller() {
 
       setProgress(0)
       setPhase(`Installing ${file.name} on ${deviceName}…`)
-      const modules = await loadAdbModules()
-      const PackageManager = modules.androidBin.PackageManager
+      const activeModules = modules
+      if (!activeModules) throw new Error(modulesError || 'The browser ADB client has not loaded yet.')
+      const PackageManager = activeModules.androidBin.PackageManager
       const packageManager = new PackageManager(adb)
 
       let uploaded = 0
@@ -370,10 +400,10 @@ export function AndroidUsbInstaller() {
           type="button"
           className="button button--primary hero__adb-connect"
           onClick={connectDevice}
-          disabled={!browserSupported || connecting || installing}
+          disabled={!browserSupported || !modules || connecting || installing}
         >
           {connecting ? <LoaderCircle size={17} className="hero__adb-spinner" /> : <Usb size={17} />}
-          {connecting ? 'Connecting…' : 'Connect Android phone'}
+          {connecting ? 'Connecting…' : !modules ? 'Loading USB installer…' : 'Connect Android phone'}
         </button>
       ) : (
         <div className="hero__adb-device">
@@ -452,6 +482,12 @@ export function AndroidUsbInstaller() {
       )}
 
       <p className="hero__adb-status" aria-live="polite">{phase}</p>
+      {modulesError && !modules && (
+        <div className="hero__adb-error" role="alert">
+          <AlertCircle size={16} />
+          <span>Could not load the browser ADB client: {modulesError}</span>
+        </div>
+      )}
       {error && (
         <div className="hero__adb-error" role="alert">
           <AlertCircle size={16} />
