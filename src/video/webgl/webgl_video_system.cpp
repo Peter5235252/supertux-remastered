@@ -221,10 +221,15 @@ WebGLTexture::upload(const SDL_Surface& image)
   const bool linear = m_sampler.get_filter() != GL_NEAREST;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
                   linear ? GL_LINEAR : GL_NEAREST);
-  const bool has_mipmaps = width > 1 || height > 1;
+  // Match GPUTexture's mip chain: it stops at the smaller dimension,
+  // and the native sampler uses linear mip interpolation for both filters.
+  const bool has_mipmaps = width > 1 && height > 1;
+  const GLint max_mip_level = has_mipmaps ?
+    static_cast<GLint>(std::floor(std::log2(static_cast<float>(std::min(width, height))))) : 0;
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, max_mip_level);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                   has_mipmaps ?
-                    (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST) :
+                    (linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_LINEAR) :
                     (linear ? GL_LINEAR : GL_NEAREST));
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
                   texture_wrap(m_sampler.get_wrap_s()));
