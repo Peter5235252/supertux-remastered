@@ -232,3 +232,12 @@ jobs:
           tag_name: test-build
           files: android-apks/*.apk
           fail_on_unmatched_files: true
+
+      - name: Publish same-origin APKs for the WebUSB installer
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./android-apks
+          destination_dir: downloads/android
+          keep_files: true
