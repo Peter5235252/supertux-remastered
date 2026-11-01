@@ -137,7 +137,7 @@ jobs:
           cp build/data/shader/*.wgsl build/shader/
           split -b 50M -a 2 build/supertux2.data build/supertux2.data.part
           chunk_count=$(find build -maxdepth 1 -type f -name 'supertux2.data.part??' | wc -l)
-          printf '%s\\n' "$chunk_count" > build/supertux2.data.parts
+          printf '%s\n' "$chunk_count" > build/supertux2.data.parts
           node web/run-wasm-smoke.mjs "$GITHUB_WORKSPACE/build"
 
       - name: Upload browser smoke diagnostics
