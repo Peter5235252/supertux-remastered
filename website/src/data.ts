@@ -3,6 +3,8 @@ export const RELEASES_URL = `${REPO_URL}/releases/tag/test-build`
 export const UPSTREAM_URL = 'https://github.com/SuperTux/supertux'
 export const ORIGINAL_SITE = 'https://www.supertux.org'
 
+const ANDROID_APK_BASE = `${import.meta.env.BASE_URL}downloads/android/`
+
 export const RELEASE = {
   tag: 'test-build',
   label: 'Rolling test build',
@@ -14,13 +16,13 @@ export const RELEASE = {
   macosUniversal:
     'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/supertux-remastered-macos-universal.tar.gz',
   androidArm64:
-    'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/SuperTux-Android-arm64-v8a.apk',
+    `${ANDROID_APK_BASE}SuperTux-Android-arm64-v8a.apk`,
   androidArmv7:
-    'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/SuperTux-Android-armeabi-v7a.apk',
+    `${ANDROID_APK_BASE}SuperTux-Android-armeabi-v7a.apk`,
   androidX64:
-    'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/SuperTux-Android-x86_64.apk',
+    `${ANDROID_APK_BASE}SuperTux-Android-x86_64.apk`,
   androidX86:
-    'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/SuperTux-Android-x86.apk',
+    `${ANDROID_APK_BASE}SuperTux-Android-x86.apk`,
 }
 
 export type Platform = 'linux' | 'windows' | 'macos'
