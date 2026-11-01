@@ -33,7 +33,29 @@ permissions:
   contents: write
 
 jobs:
+  signing-key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 21
+      - name: Generate temporary signing key
+        run: |
+          mkdir -p android-signing
+          PASS="$(openssl rand -hex 24)"
+          printf '%s' "$PASS" > android-signing/password
+          keytool -genkeypair -v -keystore android-signing/supertux.keystore -storetype PKCS12 -storepass "$PASS" -alias supertux -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SuperTux Remastered Temporary Test Key"
+      - name: Share signing key with ABI jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: temporary-android-test-signing-key
+          path: android-signing/
+          retention-days: 1
+
   android:
+    needs: signing-key
     strategy:
       fail-fast: false
       matrix:
@@ -163,34 +185,19 @@ jobs:
             || { echo "error: SDL lacks the Vulkan GPU backend (vkCreateInstance missing)"; exit 1; }
           echo "Vulkan GPU backend present: $SO"
 
-      - name: Fetch stable signing key
-        working-directory: mk/android/app/build/outputs/apk/release
-        env:
-          ANDROID_SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}
-          ANDROID_SIGNING_PW: ${{ secrets.ANDROID_SIGNING_PW }}
-        run: |
-          if [[ -z "$ANDROID_SIGNING_KEY" || -z "$ANDROID_SIGNING_PW" ]]; then
-            echo "::error::Configure ANDROID_SIGNING_KEY and ANDROID_SIGNING_PW repository secrets. A persistent signing key is required for APK updates."
-            exit 1
-          fi
-
-          printf '%s' "$ANDROID_SIGNING_KEY" | base64 --decode > supertux.keystore
-          keytool -list -keystore supertux.keystore -storepass "$ANDROID_SIGNING_PW" -alias supertux >/dev/null
+      - name: Download temporary signing key
+        uses: actions/download-artifact@v4
+        with:
+          name: temporary-android-test-signing-key
+          path: android-signing
 
       - name: Sign and verify APK
         working-directory: mk/android/app/build/outputs/apk/release
-        env:
-          ANDROID_SIGNING_PW: ${{ secrets.ANDROID_SIGNING_PW }}
         run: |
           APK="SuperTux-Android-${{ matrix.arch }}.apk"
           cp "SuperTux-Android-${{ matrix.arch }}-unsigned.apk" "$APK"
-
-          "$ANDROID_SDK_ROOT/build-tools/${B_T_VERSION}/apksigner" sign \
-            --ks supertux.keystore \
-            --ks-key-alias supertux \
-            --ks-pass env:ANDROID_SIGNING_PW \
-            "$APK"
-
+          export ANDROID_SIGNING_PW="$(cat "$GITHUB_WORKSPACE/android-signing/password")"
+          "$ANDROID_SDK_ROOT/build-tools/${B_T_VERSION}/apksigner" sign --ks "$GITHUB_WORKSPACE/android-signing/supertux.keystore" --ks-key-alias supertux --ks-pass env:ANDROID_SIGNING_PW "$APK"
           "$ANDROID_SDK_ROOT/build-tools/${B_T_VERSION}/apksigner" verify --verbose "$APK"
 
       - name: Upload signed APK
