@@ -190,11 +190,10 @@ add_package(TARGET Freetype
 #     PKG RAQM PKG_USE RAQM CONFIG PKG_CONFIG libraqm raqm)
 # endif()
 
-add_package(TARGET SDL3_image
-  PKG SDL3_image PKG_USE SDL3_image::SDL3_image CONFIG REQUIRED PKG_CONFIG SDL3_image sdl3_image
-  ${SUPERTUX_ANDROID_PREFER_PKGCONF})
-
 if(NOT EMSCRIPTEN)
+  add_package(TARGET SDL3_image
+    PKG SDL3_image PKG_USE SDL3_image::SDL3_image CONFIG REQUIRED PKG_CONFIG SDL3_image sdl3_image
+    ${SUPERTUX_ANDROID_PREFER_PKGCONF})
   add_package(TARGET SDL3
     PKG SDL3 PKG_USE SDL3::SDL3 CONFIG REQUIRED PKG_CONFIG sdl3 SDL3
     ${SUPERTUX_ANDROID_PREFER_PKGCONF})
@@ -219,6 +218,22 @@ else()
   # the SDL_GPU implementation on top of emdawnwebgpu.
   set(XDL_BUILD_TEST OFF CACHE BOOL "" FORCE)
   add_subdirectory(external/XDL_wgpu EXCLUDE_FROM_ALL)
+
+  # Build SDL3_image against the exact SDL3 source tree used by XDL_wgpu.
+  # Importing the vcpkg package here would define a second SDL3 target set.
+  set(SDLIMAGE_VENDORED OFF CACHE BOOL "" FORCE)
+  set(SDLIMAGE_STRICT ON CACHE BOOL "" FORCE)
+  set(SDLIMAGE_BACKEND_STB ON CACHE BOOL "" FORCE)
+  set(SDLIMAGE_PNG_LIBPNG OFF CACHE BOOL "" FORCE)
+  set(SDLIMAGE_AVIF OFF CACHE BOOL "" FORCE)
+  set(SDLIMAGE_JXL OFF CACHE BOOL "" FORCE)
+  set(SDLIMAGE_TIF OFF CACHE BOOL "" FORCE)
+  set(SDLIMAGE_WEBP OFF CACHE BOOL "" FORCE)
+  set(SDLIMAGE_SAMPLES OFF CACHE BOOL "" FORCE)
+  set(SDLIMAGE_TESTS OFF CACHE BOOL "" FORCE)
+  set(SDLIMAGE_INSTALL OFF CACHE BOOL "" FORCE)
+  add_subdirectory(external/XDL_wgpu/external/SDL_image EXCLUDE_FROM_ALL)
+  add_library(SDL3_image ALIAS SDL3_image-static)
 endif()
 
 # TODO: SDL3
