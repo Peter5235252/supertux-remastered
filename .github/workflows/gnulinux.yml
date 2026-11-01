@@ -16,6 +16,11 @@
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 name: GNU/Linux
+
+# Keep only the newest validation run for each workflow and PR/branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 on:
   workflow_dispatch:
   push:
