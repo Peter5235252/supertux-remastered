@@ -273,11 +273,6 @@ jobs:
           files: android-apks/*.apk
           fail_on_unmatched_files: true
 
-      - name: Publish same-origin APKs for the WebUSB installer
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: ./android-apks
-          destination_dir: downloads/android
-          keep_files: true
+      # APKs are ~300 MB each and exceed GitHub Pages' 100 MB per-file limit.
+      # They are already published as GitHub Release assets above; the website
+      # downloads them directly from that release instead of copying them to gh-pages.

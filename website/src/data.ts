@@ -3,7 +3,7 @@ export const RELEASES_URL = `${REPO_URL}/releases/tag/test-build`
 export const UPSTREAM_URL = 'https://github.com/SuperTux/supertux'
 export const ORIGINAL_SITE = 'https://www.supertux.org'
 
-const ANDROID_APK_BASE = `${import.meta.env.BASE_URL}downloads/android/`
+const ANDROID_APK_BASE = 'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/'
 
 export const RELEASE = {
   tag: 'test-build',
