@@ -391,11 +391,17 @@ if (FileSystem::is_directory(olduserdir)) {
 
 #ifdef __EMSCRIPTEN__
   EM_ASM({
+    const userdir = UTF8ToString($0);
     try {
-      FS.mount(IDBFS, {}, m_userdir);
-      FS.syncfs(true, (err) => { console.log(err); });
-    } catch(err) {}
-  }, 0); // EM_ASM is a variadic macro and Clang requires at least 1 value for the variadic argument
+      FS.mount(IDBFS, {}, userdir);
+      FS.syncfs(true, (err) => {
+        if (err) console.error("[superTux] IDBFS initial sync failed:", err);
+        else console.info("[superTux] IDBFS initial sync completed");
+      });
+    } catch (err) {
+      console.error("[superTux] IDBFS mount failed:", err);
+    }
+  }, m_userdir.c_str());
 #endif
 
   if (!PHYSFS_setWriteDir(m_userdir.c_str()))
