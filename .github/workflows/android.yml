@@ -195,7 +195,7 @@ jobs:
           mv mk/android/app/build/outputs/apk/release/app-release-unsigned.apk \
             mk/android/app/build/outputs/apk/release/SuperTux-Android-${{ matrix.arch }}-unsigned.apk
 
-      - name: Verify native Vulkan GPU backend in the APK
+      - name: Verify Vulkan backend and game data in the APK
         working-directory: mk/android
         run: |
           APK=app/build/outputs/apk/release/SuperTux-Android-${{ matrix.arch }}-unsigned.apk
@@ -208,6 +208,22 @@ jobs:
           strings "$SO" | grep -q vkCreateInstance \
             || { echo "error: SDL lacks the Vulkan GPU backend (vkCreateInstance missing)"; exit 1; }
           echo "Vulkan GPU backend present: $SO"
+
+          DATA_ZIP=/tmp/apkcheck/data.zip
+          unzip -p "$APK" assets/data.zip > "$DATA_ZIP"
+          test -s "$DATA_ZIP" || {
+            echo "error: APK game data archive is missing or empty"
+            exit 1
+          }
+          unzip -tq "$DATA_ZIP" >/dev/null || {
+            echo "error: APK game data archive is corrupt"
+            exit 1
+          }
+          unzip -Z1 "$DATA_ZIP" | grep -Fxq 'images/engine/icons/supertux-256x256.png' || {
+            echo "error: APK game data archive is missing the startup icon"
+            exit 1
+          }
+          echo "Game data archive verified: $(wc -c < "$DATA_ZIP") bytes"
 
       - name: Download temporary signing key
         uses: actions/download-artifact@v4

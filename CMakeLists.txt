@@ -503,7 +503,15 @@ if(ANDROID)
     file(MAKE_DIRECTORY "${ANDROID_ASSETS_DIR}")
   endif()
 
-  file(GLOB DATA_CONTENTS RELATIVE CONFIGURE_DEPENDS "${DATA_DIR}" "${DATA_DIR}/*")
+  file(GLOB DATA_CONTENTS
+    LIST_DIRECTORIES true
+    RELATIVE "${DATA_DIR}"
+    CONFIGURE_DEPENDS
+    "${DATA_DIR}/*"
+  )
+  if(NOT DATA_CONTENTS)
+    message(FATAL_ERROR "No Android game assets found in ${DATA_DIR}")
+  endif()
   add_custom_command(
     OUTPUT "${ANDROID_DATA_ZIP}"
     COMMAND ${CMAKE_COMMAND} -E tar "cfv" "${ANDROID_DATA_ZIP}" --format=zip ${DATA_CONTENTS}
