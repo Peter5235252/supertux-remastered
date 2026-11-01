@@ -27,15 +27,18 @@
 #include "util/gettext.hpp"
 #include "util/log.hpp"
 #include "video/null/null_video_system.hpp"
+#ifdef __EMSCRIPTEN__
+#include "video/webgl/webgl_video_system.hpp"
+#else
 #include "video/gpu/gpu_video_system.hpp"
+#endif
 #include "video/sdl_surface.hpp"
 #include "video/sdl_surface_ptr.hpp"
 
 namespace {
 
-/// Display name of the GPU backend actually in use ("Metal",
-/// "DirectX 12", "Vulkan"). Falls back to the platform default when no
-/// GPU device exists yet (e.g. menus constructed before video init).
+#ifndef __EMSCRIPTEN__
+/// Display name of the native SDL_GPU backend actually in use.
 std::string
 gpu_backend_display_name()
 {
@@ -50,8 +53,6 @@ gpu_backend_display_name()
         return "DirectX 12";
       if (driver == "vulkan")
         return "Vulkan";
-      if (driver == "webgpu")
-        return "WebGPU";
     }
   }
 #if defined(__APPLE__)
@@ -62,6 +63,7 @@ gpu_backend_display_name()
   return "Vulkan";
 #endif
 }
+#endif
 
 } // namespace
 
@@ -71,7 +73,11 @@ VideoSystem::create(VideoSystem::Enum video_system)
   switch (video_system)
   {
     case VIDEO_GPU:
+#ifdef __EMSCRIPTEN__
+      return std::make_unique<WebGLVideoSystem>();
+#else
       return std::make_unique<GPUVideoSystem>();
+#endif
 
     case VIDEO_NULL:
       return std::make_unique<NullVideoSystem>();
@@ -124,11 +130,15 @@ std::vector<VideoSystem::Info>
 VideoSystem::get_available_video_systems()
 {
   std::vector<VideoSystem::Info> output;
-  // Name the real native backend (Metal / DirectX 12 / Vulkan), never a
-  // translation layer. Display-only; the stored value stays VIDEO_GPU.
+#ifdef __EMSCRIPTEN__
+  output.push_back({ VIDEO_GPU, "WebGL 2",
+    _("Hardware-accelerated browser renderer using WebGL 2.") });
+#else
+  // Display the real native backend. The stored value remains VIDEO_GPU.
   const std::string backend = gpu_backend_display_name();
   output.push_back({ VIDEO_GPU, backend,
     _("Hardware-accelerated native renderer with 4K HD textures and HDR output. Active backend: ") + backend + "." });
+#endif
   return output;
 }
 

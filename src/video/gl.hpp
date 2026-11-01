@@ -16,6 +16,10 @@
 
 #pragma once
 
+#ifdef __EMSCRIPTEN__
+#include <GLES3/gl3.h>
+#else
+
 #define GLint int
 
 enum GLenum {
@@ -31,3 +35,5 @@ enum GLenum {
   GL_MIRRORED_REPEAT,
   GL_REPEAT
 };
+
+#endif // __EMSCRIPTEN__
