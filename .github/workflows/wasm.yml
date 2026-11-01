@@ -38,13 +38,11 @@ permissions:
 
 jobs:
   wasm:
-    # PRs need one Release build for the real-browser smoke test. Keep the
-    # Debug build for main/tag builds, but don't consume a second PR runner.
-    if: (github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch') || matrix.build_type == 'Release'
+    # PRs and manual runs use one Release build; pushes and tags use both.
     strategy:
       fail-fast: false
       matrix:
-        build_type: ["Release", "Debug"]
+        build_type: ${{ (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && fromJSON('["Release"]') || fromJSON('["Release", "Debug"]') }}
 
     runs-on: ubuntu-latest
     steps:
