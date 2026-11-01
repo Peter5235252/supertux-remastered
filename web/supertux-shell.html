@@ -3,133 +3,805 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#050b13" />
+  <meta name="theme-color" content="#07111f" />
+  <meta name="description" content="Loading SuperTux Remastered — the classic penguin platformer, rebuilt for the browser." />
   <title>SuperTux Remastered — WebGL 2 / WASM</title>
   <style>
+    :root {
+      color-scheme: dark;
+      --ice: #8de4ff;
+      --ice-bright: #c6f5ff;
+      --text: #f1f8ff;
+      --muted: #a8bfd0;
+      --line: rgba(183, 224, 245, .18);
+      --panel: rgba(7, 18, 31, .78);
+    }
+
+    * { box-sizing: border-box; }
     html, body {
       margin: 0;
-      padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #050b13;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #07111f;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+
     #canvas {
+      position: fixed;
+      inset: 0;
+      display: block;
       width: 100vw;
       height: 100vh;
-      display: block;
+      background: #07111f;
     }
-    #loading {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: #050b13;
-      color: #e8f4ff;
+
+    .loading-screen {
+      position: fixed;
+      z-index: 10;
+      inset: 0;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-      transition: opacity 0.4s ease;
+      overflow-x: hidden;
+      overflow-y: auto;
+      isolation: isolate;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 78% 40%, rgba(35, 123, 166, .22), transparent 38%),
+        linear-gradient(115deg, #07111f 0%, #0b1b2b 54%, #102a3c 100%);
+      opacity: 1;
+      visibility: visible;
+      transition: opacity .55s ease, visibility .55s ease;
     }
-    #loading.hidden {
+
+    .loading-screen.hidden {
       opacity: 0;
+      visibility: hidden;
       pointer-events: none;
     }
-    .spinner {
-      width: 48px;
-      height: 48px;
-      border: 4px solid #1e3a5f;
-      border-top: 4px solid #38bdf8;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 16px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    h1 { margin: 0 0 8px 0; font-size: 1.5rem; letter-spacing: 0.05em; }
-    p { margin: 0 0 16px 0; opacity: 0.8; font-size: 0.95rem; }
-    .progress {
-      width: 320px;
-      height: 6px;
-      background: #1e3a5f;
-      border-radius: 3px;
-      overflow: hidden;
-      margin-bottom: 8px;
-    }
-    .progress-bar {
-      width: 0%;
-      height: 100%;
-      background: #38bdf8;
-      transition: width 0.2s ease;
-    }
-    .progress-text {
-      font-size: 0.85rem;
-      opacity: 0.7;
-    }
-    #error {
+
+    .loading-screen__backdrop {
       position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: #5b1a1a;
-      color: #ffd6d6;
-      display: none;
+      z-index: -2;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .loading-screen__backdrop img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 48%;
+      opacity: .26;
+      filter: saturate(.78) contrast(1.08);
+      transform: scale(1.035);
+    }
+
+    .loading-screen__backdrop::after {
+      position: absolute;
+      inset: 0;
+      content: "";
+      background:
+        linear-gradient(90deg, rgba(5, 13, 24, .96) 0%, rgba(5, 13, 24, .86) 42%, rgba(5, 13, 24, .48) 100%),
+        linear-gradient(0deg, rgba(5, 13, 24, .88) 0%, transparent 34%, rgba(5, 13, 24, .32) 100%);
+    }
+
+    .loading-screen::before,
+    .loading-screen::after {
+      position: absolute;
+      z-index: -1;
+      content: "";
+      width: 34rem;
+      height: 34rem;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(90px);
+      opacity: .16;
+    }
+
+    .loading-screen::before {
+      top: -22rem;
+      left: 8%;
+      background: #37bde9;
+    }
+
+    .loading-screen::after {
+      right: -18rem;
+      bottom: -23rem;
+      background: #227fa9;
+    }
+
+    .loading-topbar,
+    .loading-bottombar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: min(1320px, calc(100% - 96px));
+      margin-inline: auto;
+    }
+
+    .loading-topbar {
+      min-height: 94px;
+      padding-top: 18px;
+    }
+
+    .loading-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .loading-brand img {
+      display: block;
+      width: 94px;
+      height: 58px;
+      object-fit: contain;
+    }
+
+    .loading-brand__name {
+      display: flex;
       flex-direction: column;
+      gap: 2px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .19em;
+      text-transform: uppercase;
+    }
+
+    .loading-brand__name span:last-child {
+      color: #8daec4;
+      font-size: 10px;
+      font-weight: 650;
+      letter-spacing: .23em;
+    }
+
+    .loading-build-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(7, 20, 34, .48);
+      color: #c5e7f6;
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      backdrop-filter: blur(16px);
+    }
+
+    .loading-build-tag__dot,
+    .loading-kicker__dot {
+      width: 7px;
+      height: 7px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: #7de3ff;
+      box-shadow: 0 0 13px rgba(125, 227, 255, .9);
+    }
+
+    .loading-layout {
+      display: grid;
+      grid-template-columns: minmax(360px, .88fr) minmax(400px, 1.12fr);
+      align-items: center;
+      gap: clamp(42px, 7vw, 112px);
+      width: min(1320px, calc(100% - 96px));
+      flex: 1;
+      margin: 0 auto;
+      padding: 44px 0 54px;
+    }
+
+    .loading-copy {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .loading-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      margin: 0 0 23px;
+      color: #a9d9ee;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .2em;
+      line-height: 1.5;
+      text-transform: uppercase;
+    }
+
+    .loading-kicker__dot { animation: glow 2.2s ease-in-out infinite; }
+
+    .loading-title {
+      margin: 0;
+      font-size: clamp(46px, 5.3vw, 76px);
+      font-weight: 820;
+      letter-spacing: -.065em;
+      line-height: .98;
+      text-wrap: balance;
+    }
+
+    .loading-title span {
+      color: var(--ice);
+      text-shadow: 0 4px 36px rgba(74, 194, 235, .22);
+    }
+
+    .loading-intro {
+      max-width: 470px;
+      margin: 19px 0 30px;
+      color: #c2d3df;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .loading-panel {
+      max-width: 530px;
+      padding: 22px 23px 19px;
+      border: 1px solid rgba(183, 224, 245, .19);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(10, 28, 45, .88), rgba(7, 19, 32, .78));
+      box-shadow: 0 22px 70px rgba(0, 0, 0, .24), inset 0 1px 0 rgba(255, 255, 255, .045);
+      backdrop-filter: blur(22px);
+    }
+
+    .loading-panel__heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 13px;
+    }
+
+    .loading-panel__state {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .loading-panel__label {
+      color: #f0f8ff;
+      font-size: 14px;
+      font-weight: 750;
+      letter-spacing: -.015em;
+    }
+
+    .loading-panel__detail {
+      color: #a9bdcc;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .loading-percent {
+      color: var(--ice-bright);
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    .loading-progress {
+      height: 7px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: rgba(132, 179, 204, .18);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, .25);
+    }
+
+    .loading-progress__bar {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #5ec9ef, #b7f1ff);
+      box-shadow: 0 0 18px rgba(100, 211, 246, .34);
+      transition: width .32s ease;
+    }
+
+    .loading-stages {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 20px;
+    }
+
+    .loading-stage {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      color: #71899b;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+
+    .loading-stage__number {
+      display: grid;
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid rgba(165, 201, 220, .25);
+      border-radius: 50%;
+      color: #92aabd;
+      font-size: 9px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .loading-stage.is-active { color: #e4f7ff; }
+    .loading-stage.is-active .loading-stage__number {
+      border-color: rgba(135, 226, 255, .75);
+      background: rgba(99, 199, 234, .13);
+      color: #c7f4ff;
+      box-shadow: 0 0 16px rgba(91, 197, 231, .14);
+    }
+
+    .loading-stage.is-complete { color: #9fc9d8; }
+    .loading-stage.is-complete .loading-stage__number {
+      border-color: rgba(108, 218, 190, .46);
+      background: rgba(65, 163, 139, .14);
+      color: #8ce4ce;
+    }
+
+    .loading-hint {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 17px 0 0;
+      color: #7893a5;
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
+    .loading-hint svg { width: 14px; height: 14px; flex: 0 0 auto; opacity: .85; }
+
+    .loading-gallery {
+      display: grid;
+      min-width: 0;
+      gap: 13px;
+      transform: translateY(4px);
+    }
+
+    .gallery-feature,
+    .gallery-tile {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(218, 240, 250, .2);
+      background: #142b3a;
+      box-shadow: 0 22px 65px rgba(0, 0, 0, .27);
+    }
+
+    .gallery-feature {
+      min-height: 240px;
+      aspect-ratio: 1.72;
+      border-radius: 18px;
+    }
+
+    .gallery-feature::after,
+    .gallery-tile::after {
+      position: absolute;
+      inset: 0;
+      content: "";
+      background: linear-gradient(0deg, rgba(3, 12, 22, .82), transparent 54%);
+      pointer-events: none;
+    }
+
+    .gallery-feature img,
+    .gallery-tile img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform .7s ease;
+    }
+
+    .gallery-feature img { position: absolute; inset: 0; }
+    .gallery-caption {
+      position: absolute;
+      z-index: 1;
+      right: 21px;
+      bottom: 19px;
+      left: 21px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .gallery-caption__title {
+      display: block;
+      color: white;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .gallery-caption__meta {
+      display: block;
+      margin-top: 5px;
+      color: rgba(235, 247, 255, .76);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .gallery-caption__mark {
+      display: grid;
+      width: 35px;
+      height: 35px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .36);
+      border-radius: 50%;
+      color: white;
+      font-size: 17px;
+      backdrop-filter: blur(12px);
+    }
+
+    .gallery-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 13px;
+    }
+
+    .gallery-tile {
+      min-height: 112px;
+      aspect-ratio: 1.75;
+      border-radius: 13px;
+    }
+
+    .gallery-tile img { position: absolute; inset: 0; }
+    .gallery-tile span {
+      position: absolute;
+      z-index: 1;
+      right: 13px;
+      bottom: 12px;
+      left: 13px;
+      color: #f2f9ff;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .gallery-footnote {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      color: #86a6b9;
+      font-size: 9px;
+      font-weight: 750;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+    }
+
+    .loading-bottombar {
+      min-height: 54px;
+      border-top: 1px solid rgba(183, 224, 245, .12);
+      color: #7792a5;
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .loading-bottombar strong {
+      color: #b5d9e9;
+      font-weight: 750;
+    }
+
+    .error-screen {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      display: none;
       align-items: center;
       justify-content: center;
-      padding: 24px;
-      z-index: 20;
-      text-align: center;
+      overflow: auto;
+      padding: 28px;
+      background:
+        linear-gradient(rgba(5, 13, 24, .78), rgba(5, 13, 24, .94)),
+        url("../shots/ancient-ruin.webp") center / cover no-repeat,
+        #07111f;
+      color: var(--text);
     }
-    #error h2 { margin-top: 0; }
-    #error button {
-      margin-top: 16px;
-      padding: 10px 20px;
-      background: #38bdf8;
-      color: #050b13;
-      border: none;
-      border-radius: 6px;
-      font-weight: 600;
+
+    .error-card {
+      width: min(590px, 100%);
+      padding: clamp(25px, 5vw, 42px);
+      border: 1px solid rgba(183, 224, 245, .22);
+      border-radius: 20px;
+      background: rgba(7, 19, 32, .9);
+      box-shadow: 0 26px 90px rgba(0, 0, 0, .42);
+      backdrop-filter: blur(22px);
+    }
+
+    .error-card__symbol {
+      display: grid;
+      width: 43px;
+      height: 43px;
+      place-items: center;
+      margin-bottom: 22px;
+      border: 1px solid rgba(255, 172, 150, .45);
+      border-radius: 13px;
+      background: rgba(190, 82, 64, .15);
+      color: #ffc2b5;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .error-card h2 {
+      margin: 0 0 12px;
+      font-size: clamp(28px, 5vw, 42px);
+      letter-spacing: -.045em;
+    }
+
+    #error-msg {
+      max-height: 25vh;
+      overflow: auto;
+      color: #c5d5df;
+      font-size: 12px;
+      line-height: 1.65;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .error-card__help {
+      margin: 17px 0 0;
+      color: #8faabd;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .retry-button {
+      margin-top: 24px;
+      padding: 12px 20px;
+      border: 1px solid rgba(189, 239, 255, .62);
+      border-radius: 10px;
+      background: linear-gradient(135deg, #b8efff, #72d1ef);
+      color: #082033;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 850;
       cursor: pointer;
+      transition: transform .18s ease, filter .18s ease;
     }
-    #error button:hover { background: #7dd3fc; }
+
+    .retry-button:hover { transform: translateY(-2px); filter: brightness(1.06); }
+    .retry-button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
+
+    @keyframes glow {
+      0%, 100% { opacity: .65; }
+      50% { opacity: 1; }
+    }
+
+    @media (max-width: 980px) {
+      .loading-layout {
+        grid-template-columns: minmax(320px, .92fr) minmax(300px, 1.08fr);
+        gap: 34px;
+        width: min(100% - 56px, 850px);
+      }
+      .loading-topbar, .loading-bottombar { width: calc(100% - 56px); }
+      .loading-title { font-size: clamp(43px, 6vw, 62px); }
+      .loading-panel { padding: 18px; }
+      .loading-gallery { gap: 10px; }
+      .gallery-pair { gap: 10px; }
+    }
+
+    @media (max-width: 700px) {
+      html, body { overflow: auto; }
+      .loading-screen { min-height: 100%; }
+      .loading-topbar, .loading-bottombar { width: calc(100% - 36px); }
+      .loading-topbar { min-height: 78px; padding-top: 8px; }
+      .loading-brand img { width: 74px; height: 48px; }
+      .loading-brand__name { font-size: 10px; }
+      .loading-brand__name span:last-child { font-size: 9px; }
+      .loading-build-tag { padding: 8px 10px; font-size: 8px; letter-spacing: .1em; }
+      .loading-layout {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: center;
+        gap: 25px;
+        width: calc(100% - 36px);
+        padding: 35px 0 28px;
+      }
+      .loading-copy { max-width: none; }
+      .loading-kicker { margin-bottom: 17px; font-size: 9px; }
+      .loading-title { font-size: clamp(44px, 11vw, 64px); }
+      .loading-intro { margin: 15px 0 22px; font-size: 13px; }
+      .loading-panel { max-width: none; padding: 17px; }
+      .loading-stages { gap: 5px; }
+      .loading-stage { gap: 5px; font-size: 9px; }
+      .loading-stage__number { width: 20px; height: 20px; }
+      .loading-gallery { display: grid; grid-template-columns: 1.15fr 1fr; align-items: stretch; gap: 9px; }
+      .gallery-feature { min-height: 125px; height: 100%; aspect-ratio: auto; }
+      .gallery-caption { right: 10px; bottom: 10px; left: 10px; }
+      .gallery-caption__title { font-size: 10px; }
+      .gallery-caption__meta, .gallery-caption__mark { display: none; }
+      .gallery-pair { grid-template-columns: 1fr; gap: 9px; }
+      .gallery-tile { min-height: 58px; aspect-ratio: 2.2; }
+      .gallery-tile span { right: 8px; bottom: 7px; left: 8px; font-size: 7px; }
+      .gallery-footnote { display: none; }
+      .loading-bottombar { min-height: 48px; font-size: 8px; }
+    }
+
+    @media (max-width: 380px) {
+      .loading-build-tag { max-width: 132px; font-size: 7px; }
+      .loading-stage { font-size: 8px; }
+      .loading-panel__detail { font-size: 10px; }
+      .loading-bottombar span:last-child { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+      }
+    }
   </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <canvas id="canvas" aria-label="SuperTux Remastered game canvas"></canvas>
   <input id="file-upload" type="file" multiple hidden />
 
-  <div id="loading">
-    <div class="spinner"></div>
-    <h1>SuperTux Remastered</h1>
-    <p id="loading-text">Preparing WebGL 2 renderer…</p>
-    <div class="progress">
-      <div class="progress-bar" id="progress-bar"></div>
+  <div id="loading" class="loading-screen" role="status" aria-live="polite">
+    <div class="loading-screen__backdrop" aria-hidden="true">
+      <img src="../shots/night-chill.webp" alt="" />
     </div>
-    <p class="progress-text" id="progress-text">0%</p>
+
+    <header class="loading-topbar">
+      <div class="loading-brand">
+        <img src="../brand/supertux-logo.png" alt="SuperTux" />
+        <div class="loading-brand__name">
+          <span>SuperTux</span>
+          <span>Remastered</span>
+        </div>
+      </div>
+      <div class="loading-build-tag">
+        <span class="loading-build-tag__dot" aria-hidden="true"></span>
+        WebGL 2 · Browser edition
+      </div>
+    </header>
+
+    <main class="loading-layout">
+      <section class="loading-copy" aria-label="Game loading progress">
+        <p class="loading-kicker">
+          <span class="loading-kicker__dot" aria-hidden="true"></span>
+          A little patience, then adventure
+        </p>
+        <h1 class="loading-title">The world is<br /><span>waking up.</span></h1>
+        <p class="loading-intro">
+          The snow is settling, the lights are coming on, and Tux is getting ready.
+          SuperTux Remastered is loading in your browser.
+        </p>
+
+        <div class="loading-panel">
+          <div class="loading-panel__heading">
+            <div class="loading-panel__state">
+              <span id="loading-text" class="loading-panel__label">Preparing the world…</span>
+              <span id="loading-detail" class="loading-panel__detail">Gathering the game files for your adventure.</span>
+            </div>
+            <span id="progress-text" class="loading-percent">0%</span>
+          </div>
+          <div
+            class="loading-progress"
+            role="progressbar"
+            aria-label="Game loading progress"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+            id="progress-track"
+          >
+            <div class="loading-progress__bar" id="progress-bar"></div>
+          </div>
+          <div class="loading-stages" aria-hidden="true">
+            <div class="loading-stage is-active" data-stage="data">
+              <span class="loading-stage__number">01</span><span>Game data</span>
+            </div>
+            <div class="loading-stage" data-stage="engine">
+              <span class="loading-stage__number">02</span><span>Engine</span>
+            </div>
+            <div class="loading-stage" data-stage="renderer">
+              <span class="loading-stage__number">03</span><span>Renderer</span>
+            </div>
+          </div>
+          <p class="loading-hint">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3v18M3 12h18M5.64 5.64l12.72 12.72M18.36 5.64 5.64 18.36" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+            First launch may take a little longer while the browser prepares the game.
+          </p>
+        </div>
+      </section>
+
+      <aside class="loading-gallery" aria-label="Scenes from SuperTux Remastered">
+        <div class="gallery-feature">
+          <img src="../shots/night-chill.webp" alt="A moonlit snowy level from SuperTux Remastered" />
+          <div class="gallery-caption">
+            <div>
+              <span class="gallery-caption__title">Icy Island</span>
+              <span class="gallery-caption__meta">A chilly world awaits</span>
+            </div>
+            <span class="gallery-caption__mark" aria-hidden="true">✦</span>
+          </div>
+        </div>
+        <div class="gallery-pair">
+          <div class="gallery-tile">
+            <img src="../shots/crystal-mine.webp" alt="The Crystal Mine level" loading="eager" />
+            <span>Crystal Mine</span>
+          </div>
+          <div class="gallery-tile">
+            <img src="../shots/journey-begins.webp" alt="The beginning of Tux's journey" loading="eager" />
+            <span>The journey begins</span>
+          </div>
+        </div>
+        <div class="gallery-footnote">
+          <span>Captured in-game</span>
+          <span>Free · Open source</span>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="loading-bottombar">
+      <span><strong>SuperTux Remastered</strong> · Browser build</span>
+      <span>No account. No launcher. Just play.</span>
+    </footer>
   </div>
 
-  <div id="error">
-    <h2 id="error-title">Game startup failed</h2>
-    <p id="error-msg"></p>
-    <p>Use a browser with WebGL 2 support (OpenGL ES 3.0).</p>
-    <button onclick="location.reload()">Retry</button>
+  <div id="error" class="error-screen" role="alert">
+    <section class="error-card">
+      <div class="error-card__symbol" aria-hidden="true">!</div>
+      <p class="loading-kicker"><span class="loading-kicker__dot"></span> A snowdrift in the way</p>
+      <h2 id="error-title">Game startup failed</h2>
+      <p id="error-msg"></p>
+      <p class="error-card__help">Make sure your browser supports WebGL 2 (OpenGL ES 3.0), then try loading the game again.</p>
+      <button class="retry-button" onclick="location.reload()">Try again</button>
+    </section>
   </div>
 
   <script type="module">
-    function setProgress(pct, label) {
-      document.getElementById('progress-bar').style.width = pct + '%';
-      document.getElementById('progress-text').textContent = pct + '%';
-      const el = document.getElementById('loading-text');
-      if (label) el.textContent = label;
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const progressTrack = document.getElementById('progress-track');
+    const loadingText = document.getElementById('loading-text');
+    const loadingDetail = document.getElementById('loading-detail');
+    const stageElements = Array.from(document.querySelectorAll('[data-stage]'));
+    const stageOrder = ['data', 'engine', 'renderer'];
+
+    function setStage(stage) {
+      const current = stageOrder.indexOf(stage);
+      stageElements.forEach((element) => {
+        const index = stageOrder.indexOf(element.dataset.stage);
+        element.classList.toggle('is-active', index === current);
+        element.classList.toggle('is-complete', index >= 0 && index < current);
+      });
     }
 
-    // Configure the emscripten Module before the glue script runs.
-    // Must be on global scope (window) so supertux2.js can find it.
+    function setProgress(pct, label, detail) {
+      const value = Math.max(0, Math.min(100, Math.round(pct)));
+      progressBar.style.width = value + '%';
+      progressText.textContent = value + '%';
+      progressTrack.setAttribute('aria-valuenow', String(value));
+      if (label) loadingText.textContent = label;
+      if (detail) loadingDetail.textContent = detail;
+    }
+
+    setProgress(2, 'Preparing the world…', 'Gathering the game files for your adventure.');
 
     async function fetchDataBlob() {
       const manifestUrl = new URL('supertux2.data.parts', document.baseURI);
       const manifestResponse = await fetch(manifestUrl);
       if (!manifestResponse.ok) {
-        throw new Error(`HTTP ${manifestResponse.status} while downloading game-data manifest`);
+        throw new Error('HTTP ' + manifestResponse.status + ' while downloading game-data manifest');
       }
 
       const chunkCount = Number((await manifestResponse.text()).trim());
@@ -140,26 +812,52 @@
       const chunks = [];
       for (let i = 0; i < chunkCount; i++) {
         const suffix = String.fromCharCode(97 + Math.floor(i / 26)) + String.fromCharCode(97 + (i % 26));
-        const url = new URL(`supertux2.data.part${suffix}`, document.baseURI);
-        setProgress(100, `Downloading game data — chunk ${suffix.toUpperCase()}…`);
+        const url = new URL('supertux2.data.part' + suffix, document.baseURI);
+        const label = 'Downloading world data';
+        const detail = 'Fetching game files · chunk ' + (i + 1) + ' of ' + chunkCount;
+        const start = 4 + (i / chunkCount) * 31;
+        setProgress(start, label, detail);
 
         const resp = await fetch(url);
         if (!resp.ok) {
-          throw new Error(`HTTP ${resp.status} while downloading ${url.pathname}`);
+          throw new Error('HTTP ' + resp.status + ' while downloading ' + url.pathname);
         }
 
-        const blob = await resp.blob();
+        let blob;
+        if (resp.body && resp.body.getReader) {
+          const reader = resp.body.getReader();
+          const parts = [];
+          const total = Number(resp.headers.get('content-length')) || 0;
+          let loaded = 0;
+          while (true) {
+            const result = await reader.read();
+            if (result.done) break;
+            parts.push(result.value);
+            loaded += result.value.byteLength;
+            if (total > 0) {
+              const fraction = Math.min(1, loaded / total);
+              setProgress(4 + ((i + fraction) / chunkCount) * 31, label,
+                detail + ' · ' + Math.round(fraction * 100) + '%');
+            }
+          }
+          blob = new Blob(parts, { type: 'application/octet-stream' });
+        } else {
+          blob = await resp.blob();
+        }
+
         if (blob.size === 0) {
-          throw new Error(`Empty game data chunk: ${url.pathname}`);
+          throw new Error('Empty game data chunk: ' + url.pathname);
         }
 
         chunks.push(blob);
-        console.log(`[superTux] Fetched chunk ${suffix.toUpperCase()} (${blob.size} bytes)`);
+        setProgress(4 + ((i + 1) / chunkCount) * 31, label,
+          'Game files received · ' + (i + 1) + ' of ' + chunkCount + ' chunks');
+        console.log('[superTux] Fetched chunk ' + suffix.toUpperCase() + ' (' + blob.size + ' bytes)');
       }
 
       const fullBlob = new Blob(chunks, { type: 'application/octet-stream' });
       const blobUrl = URL.createObjectURL(fullBlob);
-      console.log(`[superTux] Reassembled .data: ${fullBlob.size} bytes from ${chunks.length} chunks`);
+      console.log('[superTux] Reassembled .data: ' + fullBlob.size + ' bytes from ' + chunks.length + ' chunks');
       return blobUrl;
     }
 
@@ -206,6 +904,8 @@
       // first safe point to resize: video, GPU and menu systems are initialized.
       if (!firstFramePresented) {
         firstFramePresented = true;
+        setProgress(100, 'Adventure ready', 'The world is yours. Have fun!');
+        setStage('finished');
         requestAnimationFrame(() => {
           canResize = true;
           tryResize();
@@ -394,6 +1094,8 @@
 
       onRuntimeInitialized: () => {
         console.log('[superTux] Runtime initialized');
+        setStage('renderer');
+        setProgress(68, 'Compiling shaders', 'Starting the WebGL 2 renderer and compiling its shaders…');
         try {
           setResolution = Module.cwrap('set_resolution', 'void', ['number', 'number']);
           onDownloadProgress = Module.cwrap('onDownloadProgress', 'void',
@@ -412,10 +1114,11 @@
         if (match) {
           const loaded = Number(match[1]);
           const total = Number(match[2]);
-          const pct = Math.round((loaded / total) * 100);
-          setProgress(pct, `Downloading game data… ${pct}%`);
-        } else {
-          document.getElementById('loading-text').textContent = status;
+          const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
+          setStage('engine');
+          setProgress(36 + Math.round(pct * .28), 'Loading game engine', 'Preparing packaged game resources · ' + pct + '%');
+        } else if (status) {
+          loadingDetail.textContent = status;
         }
       },
 
@@ -426,23 +1129,22 @@
       },
     };
 
-    // Alias for convenience
     const Module = window.Module;
 
-    // Expose supertux_onready for the C++ EM_ASM callback.
     window.supertux_onready = () => {
       console.log('[superTux] C++ entry point reached');
+      setStage('renderer');
+      setProgress(84, 'Finishing the warm-up', 'Loading the title screen and preparing your first frame…');
       if (Module.onReady) Module.onReady();
     };
 
-    // Global error handler for uncaught exceptions
     window.onerror = (msg, src, line, col, err) => {
-      showError('JavaScript runtime error', err || `${msg} (${src}:${line}:${col})`);
-      return true; // Prevent default browser error handling
+      showError('JavaScript runtime error', err || (msg + ' (' + src + ':' + line + ':' + col + ')'));
+      return true;
     };
 
     window.addEventListener('unhandledrejection', (event) => {
-      showError('Unhandled startup rejection', event.reason);
+      showError('Game startup failed', event.reason);
     });
 
     window.addEventListener('pagehide', () => {
@@ -455,22 +1157,16 @@
     });
 
     async function init() {
-      // Download and reassemble the same-origin data chunks.
-      // Keep this inside init() so failures are handled by the visible catch
-      // handler below rather than an unhandled top-level module rejection.
       DATA_BLOB_URL = await fetchDataBlob();
+      setStage('engine');
+      setProgress(37, 'Starting the engine', 'The world data is ready. Loading the WebAssembly runtime…');
 
-      // Small delay so the user sees the completed preparation state.
-      await new Promise(r => setTimeout(r, 300));
-
-      // Phase 2: Load the emscripten glue script (supertux2.js is built by CI
-      // and placed next to this shell). The C++ main() runs via
-      // emscripten_set_main_loop in ScreenManager::run().
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = 'supertux2.js';
         script.onload = () => {
           console.log('[superTux] supertux2.js loaded');
+          setProgress(43, 'Starting the engine', 'Loading the game runtime…');
           resolve();
         };
         script.onerror = () => reject(new Error('Failed to load supertux2.js'));
@@ -478,12 +1174,8 @@
       });
     }
 
-    // C++ calls supertux_onready before initialization; the first-frame
-    // callback in supertux2_syncfs controls when the loading overlay disappears.
-
     init().then(() => {
       console.log('[superTux] Init complete, waiting for game to start');
-      // Fallback: if game doesn't start within 30 seconds, show error
       setTimeout(() => {
         const loading = document.getElementById('loading');
         if (loading && !loading.classList.contains('hidden')) {
@@ -493,7 +1185,7 @@
           errEl.style.display = 'flex';
           document.getElementById('error-title').textContent = 'Game failed to start';
           document.getElementById('error-msg').textContent =
-            'The game did not initialize. This may be a WebGL 2 compatibility issue. Check the browser console (F12) for details.';
+            'The game did not initialize within 30 seconds. This may be a WebGL 2 compatibility issue. Check the browser console (F12) for details.';
         }
       }, 30000);
     }).catch((err) => {
