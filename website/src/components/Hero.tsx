@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { ArrowDown, ArrowRight, Check, Copy, Download, Play, Smartphone, Sparkles, Usb } from 'lucide-react'
-import { useCopy, usePlatform } from '../hooks'
+import { ArrowDown, ArrowRight, Download, Play, Smartphone, Sparkles, Usb } from 'lucide-react'
+import { usePlatform } from '../hooks'
 import { asset, detectAndroid, detectArch } from '../lib'
-import { PLATFORM_META, RELEASE, RELEASES_URL } from '../data'
+import { PLATFORM_META, RELEASE } from '../data'
+import { AndroidUsbInstaller } from './AndroidUsbInstaller'
 import { PlatformGlyph } from './ui'
 import { Snowfall } from './Snowfall'
 
@@ -13,22 +14,12 @@ const STATS = [
   { value: '0', label: 'translation layers' },
 ]
 
-const ANDROID_APKS = [
-  { label: 'ARM64 · most phones', filename: 'SuperTux-Android-arm64-v8a.apk', href: RELEASE.androidArm64 },
-  { label: 'ARMv7 · 32-bit phones', filename: 'SuperTux-Android-armeabi-v7a.apk', href: RELEASE.androidArmv7 },
-  { label: 'x86_64 · emulators', filename: 'SuperTux-Android-x86_64.apk', href: RELEASE.androidX64 },
-  { label: 'x86 · legacy emulators', filename: 'SuperTux-Android-x86.apk', href: RELEASE.androidX86 },
-]
-
-const ADB_INSTALL_COMMAND = 'adb install -r SuperTux-Android-arm64-v8a.apk'
-
 export function Hero() {
   const platform = usePlatform()
   const meta = PLATFORM_META[platform]
   const arch = detectArch()
   const isAndroid = detectAndroid()
   const [showAndroidInstall, setShowAndroidInstall] = useState(false)
-  const { copied, copy } = useCopy()
 
   return (
     <section className="hero" id="top">
@@ -111,41 +102,7 @@ export function Hero() {
 
           {showAndroidInstall && (
             <section className="hero__usb-panel" id="android-usb-install" aria-label="Install SuperTux on Android over USB">
-              <div className="hero__usb-panel-head">
-                <div>
-                  <span className="mono-label">Android · SDL_GPU / Vulkan</span>
-                  <h3>Install through USB debugging</h3>
-                </div>
-                <a href={RELEASES_URL} target="_blank" rel="noreferrer">All Android builds <ArrowRight size={14} /></a>
-              </div>
-              <p className="hero__usb-panel-intro">
-                Download the APK for your device, connect your phone by USB, then install it with Android Debug Bridge (ADB).
-              </p>
-              <div className="hero__usb-downloads">
-                {ANDROID_APKS.map((apk) => (
-                  <a href={apk.href} key={apk.filename}>
-                    <Download size={14} />
-                    <span>{apk.label}</span>
-                  </a>
-                ))}
-              </div>
-              <ol className="hero__usb-steps">
-                <li>Enable Developer options and USB debugging on your Android phone.</li>
-                <li>Connect it to this computer, unlock the phone, and approve the USB debugging prompt.</li>
-                <li>Download the matching APK. In a terminal opened in the download folder, run:</li>
-              </ol>
-              <div className="hero__usb-command">
-                <code>{ADB_INSTALL_COMMAND}</code>
-                <button type="button" onClick={() => copy(ADB_INSTALL_COMMAND)} aria-label="Copy ADB install command">
-                  {copied ? <Check size={15} /> : <Copy size={15} />}
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-              <p className="hero__usb-note">
-                This uses ADB from your computer; browsers cannot run local ADB commands themselves. Install
-                <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" rel="noreferrer"> Android Platform Tools</a>
-                first. The ARM64 download is the default for most current phones; the other APKs cover 32-bit devices and emulators.
-              </p>
+              <AndroidUsbInstaller />
             </section>
           )}
 

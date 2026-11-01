@@ -3982,3 +3982,286 @@ pre {
     align-items: flex-start;
   }
 }
+
+
+/* ---------- Browser-native Android ADB installer ---------- */
+
+.hero__adb-installer {
+  display: grid;
+  gap: 13px;
+  color: var(--text);
+}
+
+.hero__adb-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hero__adb-header h3 {
+  margin-top: 5px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.hero__adb-header p {
+  margin-top: 6px;
+  color: #a9bed0;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.hero__adb-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(139, 230, 255, .2);
+  border-radius: 12px;
+  background: rgba(139, 230, 255, .07);
+  color: var(--ice);
+}
+
+.hero__adb-notice,
+.hero__adb-error,
+.hero__adb-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 181, 46, .2);
+  border-radius: 10px;
+  background: rgba(255, 181, 46, .055);
+  color: #e6d4ad;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.hero__adb-notice svg,
+.hero__adb-error svg,
+.hero__adb-success svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.hero__adb-error {
+  border-color: rgba(255, 132, 132, .25);
+  background: rgba(160, 54, 54, .09);
+  color: #ffc4c4;
+}
+
+.hero__adb-success {
+  border-color: rgba(111, 240, 196, .25);
+  background: rgba(36, 142, 111, .09);
+  color: #a8f0d6;
+}
+
+.hero__adb-connect,
+.hero__adb-install {
+  width: 100%;
+  min-height: 48px;
+}
+
+.hero__adb-connect:disabled,
+.hero__adb-install:disabled,
+.hero__adb-file:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.hero__adb-spinner {
+  animation: hero-adb-spin 1.1s linear infinite;
+}
+
+@keyframes hero-adb-spin {
+  to { transform: rotate(360deg); }
+}
+
+.hero__adb-device {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(111, 240, 196, .22);
+  border-radius: 11px;
+  background: rgba(111, 240, 196, .055);
+}
+
+.hero__adb-device-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.hero__adb-device-main > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hero__adb-device-main strong {
+  color: #e9f9f5;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hero__adb-device-main span:last-child {
+  color: #8faeab;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+
+.hero__adb-device > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  border: 1px solid rgba(151, 202, 238, .18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .035);
+  color: #a9bed0;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.hero__adb-device > button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.hero__adb-build {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(139, 230, 255, .15);
+  border-radius: 10px;
+  background: rgba(139, 230, 255, .045);
+}
+
+.hero__adb-build > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.hero__adb-build strong {
+  color: #eaf6ff;
+  font-size: 11px;
+}
+
+.hero__adb-build span {
+  color: #8fa8bb;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+
+.hero__adb-build > a {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(139, 230, 255, .18);
+  border-radius: 8px;
+  color: var(--ice);
+}
+
+.hero__adb-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(130px, .8fr);
+  gap: 8px;
+}
+
+.hero__adb-install,
+.hero__adb-file {
+  justify-content: center;
+  min-width: 0;
+  height: 46px;
+  padding-inline: 12px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.hero__adb-progress {
+  position: relative;
+  height: 9px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(139, 230, 255, .13);
+}
+
+.hero__adb-progress > div {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--ice-strong), var(--aurora));
+  box-shadow: 0 0 15px rgba(79, 195, 239, .28);
+  transition: width .18s ease;
+}
+
+.hero__adb-progress > span {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  color: #06121d;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 800;
+  transform: translateY(-50%);
+  mix-blend-mode: screen;
+}
+
+.hero__adb-status {
+  color: #9bb2c3;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.hero__adb-steps {
+  display: grid;
+  gap: 5px;
+  margin: 1px 0 0;
+  padding-left: 18px;
+  list-style: decimal;
+  color: #9db2c3;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.hero__adb-steps strong {
+  color: #d9f3ff;
+  font-weight: 700;
+}
+
+.hero__adb-footnote {
+  color: #71899d;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.hero__adb-footnote a {
+  color: var(--ice);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 680px) {
+  .hero__adb-header h3 { font-size: 19px; }
+  .hero__adb-icon { width: 36px; height: 36px; }
+  .hero__adb-actions { grid-template-columns: 1fr; }
+  .hero__adb-device {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
