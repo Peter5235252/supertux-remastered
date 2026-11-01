@@ -9,6 +9,10 @@ export const asset = (path: string) => {
 export const cn = (...parts: Array<string | false | null | undefined>) =>
   parts.filter(Boolean).join(' ')
 
+export function detectAndroid(): boolean {
+  return typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent)
+}
+
 export function detectPlatform(): Platform {
   if (typeof navigator === 'undefined') return 'linux'
   const uaData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData

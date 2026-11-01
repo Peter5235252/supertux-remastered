@@ -13,6 +13,14 @@ export const RELEASE = {
     'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/supertux-remastered-windows-portable.zip',
   macosUniversal:
     'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/supertux-remastered-macos-universal.tar.gz',
+  androidArm64:
+    'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/SuperTux-Android-arm64-v8a.apk',
+  androidArmv7:
+    'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/SuperTux-Android-armeabi-v7a.apk',
+  androidX64:
+    'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/SuperTux-Android-x86_64.apk',
+  androidX86:
+    'https://github.com/Peter5235252/supertux-remastered/releases/download/test-build/SuperTux-Android-x86.apk',
 }
 
 export type Platform = 'linux' | 'windows' | 'macos'

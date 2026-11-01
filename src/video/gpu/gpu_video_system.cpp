@@ -92,6 +92,36 @@ GPUVideoSystem::GPUVideoSystem() :
 #if defined(__EMSCRIPTEN__)
   SDL_SetHint(SDL_HINT_GPU_DRIVER, "webgpu");
   m_device.reset(SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_WGSL, true, nullptr));
+#elif defined(__ANDROID__)
+  // Mobile Vulkan GPUs vary widely. The renderer does not need SDL_GPU's
+  // optional Vulkan features, so disable them for broader Android support.
+  const SDL_PropertiesID gpu_props = SDL_CreateProperties();
+  if (!gpu_props)
+  {
+    throw std::runtime_error(std::string("Couldn't create Android GPU properties: ") + SDL_GetError());
+  }
+
+  const bool gpu_props_ok =
+    SDL_SetBooleanProperty(gpu_props, SDL_PROP_GPU_DEVICE_CREATE_DEBUGMODE_BOOLEAN, false) &&
+    SDL_SetBooleanProperty(gpu_props, SDL_PROP_GPU_DEVICE_CREATE_VERBOSE_BOOLEAN, false) &&
+    SDL_SetStringProperty(gpu_props, SDL_PROP_GPU_DEVICE_CREATE_NAME_STRING, "vulkan") &&
+    SDL_SetBooleanProperty(gpu_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_SPIRV_BOOLEAN, true) &&
+    SDL_SetBooleanProperty(gpu_props, SDL_PROP_GPU_DEVICE_CREATE_VULKAN_REQUIRE_HARDWARE_ACCELERATION_BOOLEAN, true) &&
+    SDL_SetBooleanProperty(gpu_props, SDL_PROP_GPU_DEVICE_CREATE_FEATURE_CLIP_DISTANCE_BOOLEAN, false) &&
+    SDL_SetBooleanProperty(gpu_props, SDL_PROP_GPU_DEVICE_CREATE_FEATURE_DEPTH_CLAMPING_BOOLEAN, false) &&
+    SDL_SetBooleanProperty(gpu_props, SDL_PROP_GPU_DEVICE_CREATE_FEATURE_INDIRECT_DRAW_FIRST_INSTANCE_BOOLEAN, false) &&
+    SDL_SetBooleanProperty(gpu_props, SDL_PROP_GPU_DEVICE_CREATE_FEATURE_ANISOTROPY_BOOLEAN, false);
+
+  if (!gpu_props_ok)
+  {
+    const std::string error = SDL_GetError();
+    SDL_DestroyProperties(gpu_props);
+    throw std::runtime_error("Couldn't configure Android Vulkan GPU: " + error);
+  }
+
+  m_device.reset(SDL_CreateGPUDeviceWithProperties(gpu_props));
+  SDL_DestroyProperties(gpu_props);
+  log_info << "Android SDL_GPU Vulkan compatibility profile enabled" << std::endl;
 #elif defined(__APPLE__)
   SDL_SetHint(SDL_HINT_GPU_DRIVER, "metal");
   m_device.reset(SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_MSL, true, nullptr));

@@ -28,6 +28,10 @@ on:
       - main
     tags:
       - '*'
+
+permissions:
+  contents: write
+
 jobs:
   android:
     strategy:
@@ -143,12 +147,12 @@ jobs:
       - name: Rename APK
         run: |
           mv mk/android/app/build/outputs/apk/release/app-release-unsigned.apk \
-            mk/android/app/build/outputs/apk/release/SuperTux-${SUPERTUX_VERSION}-${{ matrix.arch }}-unsigned.apk
+            mk/android/app/build/outputs/apk/release/SuperTux-Android-${{ matrix.arch }}-unsigned.apk
 
       - name: Verify native Vulkan GPU backend in the APK
         working-directory: mk/android
         run: |
-          APK=app/build/outputs/apk/release/SuperTux-${SUPERTUX_VERSION}-${{ matrix.arch }}-unsigned.apk
+          APK=app/build/outputs/apk/release/SuperTux-Android-${{ matrix.arch }}-unsigned.apk
           rm -rf /tmp/apkcheck && mkdir -p /tmp/apkcheck
           unzip -o -q "$APK" 'lib/*/libsupertux2.so' -d /tmp/apkcheck
           SO=$(find /tmp/apkcheck -name libsupertux2.so | head -1)
@@ -159,61 +163,65 @@ jobs:
             || { echo "error: SDL lacks the Vulkan GPU backend (vkCreateInstance missing)"; exit 1; }
           echo "Vulkan GPU backend present: $SO"
 
-      - name: Fetch keys
+      - name: Fetch stable signing key
         working-directory: mk/android/app/build/outputs/apk/release
+        env:
+          ANDROID_SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}
+          ANDROID_SIGNING_PW: ${{ secrets.ANDROID_SIGNING_PW }}
         run: |
-          if [[ "${{ secrets.ANDROID_SIGNING_KEY }}" ]]
-          then
-            echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 --decode > supertux.keystore
-          else
-            echo "Key wasn't found. Skipping..."
+          if [[ -z "$ANDROID_SIGNING_KEY" || -z "$ANDROID_SIGNING_PW" ]]; then
+            echo "::error::Configure ANDROID_SIGNING_KEY and ANDROID_SIGNING_PW repository secrets. A persistent signing key is required for APK updates."
+            exit 1
           fi
 
-      - name: Sign APK
+          printf '%s' "$ANDROID_SIGNING_KEY" | base64 --decode > supertux.keystore
+          keytool -list -keystore supertux.keystore -storepass "$ANDROID_SIGNING_PW" -alias supertux >/dev/null
+
+      - name: Sign and verify APK
         working-directory: mk/android/app/build/outputs/apk/release
+        env:
+          ANDROID_SIGNING_PW: ${{ secrets.ANDROID_SIGNING_PW }}
         run: |
-          # Note: this is created before, but just some fallback logic for later
-          if [ ! -f supertux.keystore ]
-          then
-            echo "!!! Generating a new key."
-            keytool -genkey -v \
-              -keystore supertux.keystore \
-              -alias supertux \
-              -storepass hunter2 \
-              -dname "cn=MatusBro, ou=Contributor, O=SuperTux Team, L=Antarctica, ST=Antarctica, C=aq" \
-              -keyalg RSA -keysize 2048 -validity 10000
-          fi
+          APK="SuperTux-Android-${{ matrix.arch }}.apk"
+          cp "SuperTux-Android-${{ matrix.arch }}-unsigned.apk" "$APK"
 
-          cp ./SuperTux-${SUPERTUX_VERSION}-${{ matrix.arch }}-unsigned.apk ./SuperTux-${SUPERTUX_VERSION}-${{ matrix.arch }}.apk
+          "$ANDROID_SDK_ROOT/build-tools/${B_T_VERSION}/apksigner" sign \
+            --ks supertux.keystore \
+            --ks-key-alias supertux \
+            --ks-pass env:ANDROID_SIGNING_PW \
+            "$APK"
 
-          if [[ "${{ secrets.ANDROID_SIGNING_KEY }}" ]]
-          then
-            $ANDROID_SDK_ROOT/build-tools/${B_T_VERSION}/apksigner sign \
-              --ks supertux.keystore \
-              --ks-key-alias supertux \
-              --ks-pass pass:"${{ secrets.ANDROID_SIGNING_PW }}" \
-              ./SuperTux-${SUPERTUX_VERSION}-${{ matrix.arch }}.apk
-          else
-            # More fallback logic; our key should exist
-            echo "!!! WARNING: Signing with manual CI key. Check your shit ;-/"
-            $ANDROID_SDK_ROOT/build-tools/${B_T_VERSION}/apksigner sign \
-              --ks supertux.keystore \
-              --ks-key-alias supertux \
-              --ks-pass pass:hunter2 \
-              ./SuperTux-${SUPERTUX_VERSION}-${{ matrix.arch }}.apk
-          fi
+          "$ANDROID_SDK_ROOT/build-tools/${B_T_VERSION}/apksigner" verify --verbose "$APK"
 
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
           name: "Signed SuperTux APK ${{ matrix.arch }}"
-          path: "mk/android/app/build/outputs/apk/release/SuperTux-${{ env.SUPERTUX_VERSION }}-${{ matrix.arch }}.apk"
+          path: "mk/android/app/build/outputs/apk/release/SuperTux-Android-${{ matrix.arch }}.apk"
 
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    if: github.ref == 'refs/heads/main'
+    needs: android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Android APKs
+        uses: actions/download-artifact@v4
         with:
-          files: "build/upload/*"
-          draft: true
+          pattern: "Signed SuperTux APK *"
+          path: android-apks
+          merge-multiple: true
+
+      - name: Verify all Android architectures were produced
+        run: |
+          set -euo pipefail
+          count=$(find android-apks -maxdepth 1 -type f -name '*.apk' | wc -l)
+          test "$count" -eq 4
+          ls -lh android-apks/
+
+      - name: Publish Android APKs to the rolling test release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: test-build
+          files: android-apks/*.apk
+          fail_on_unmatched_files: true

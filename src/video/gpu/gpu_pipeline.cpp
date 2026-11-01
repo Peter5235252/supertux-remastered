@@ -108,6 +108,9 @@ GPUPipeline::for_post(bool easu)
   info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
   info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
   info.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_FILL;
+#if defined(__ANDROID__)
+  info.rasterizer_state.enable_depth_clip = true;
+#endif
   info.multisample_state.sample_count = SDL_GPU_SAMPLECOUNT_1;
   info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_ALWAYS;
   info.depth_stencil_state.enable_depth_test = false;
@@ -182,6 +185,9 @@ GPUPipeline::build(Blend blend, bool lines)
     SDL_GPU_PRIMITIVETYPE_LINESTRIP : SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
   info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
   info.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_FILL;
+#if defined(__ANDROID__)
+  info.rasterizer_state.enable_depth_clip = true;
+#endif
   info.multisample_state.sample_count = SDL_GPU_SAMPLECOUNT_1;
   info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_ALWAYS;
   info.depth_stencil_state.enable_depth_test = false;
