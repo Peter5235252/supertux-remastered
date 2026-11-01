@@ -432,6 +432,7 @@ if(EMSCRIPTEN)
   # Keep the linker map and symbol trace for the CI backend-selection check.
   target_link_options(supertux2 PUBLIC
     -sASYNCIFY
+    -sASYNCIFY_STACK_SIZE=65536
     -Wl,--trace-symbol=SDL_CreateGPUDevice
     -Wl,-Map=${CMAKE_BINARY_DIR}/supertux2.map
   )
