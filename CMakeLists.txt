@@ -433,6 +433,7 @@ if(EMSCRIPTEN)
   target_link_options(supertux2 PUBLIC
     -sASYNCIFY
     -sASYNCIFY_STACK_SIZE=65536
+    -sSTACK_SIZE=1048576
     -Wl,--trace-symbol=SDL_CreateGPUDevice
     -Wl,-Map=${CMAKE_BINARY_DIR}/supertux2.map
   )
