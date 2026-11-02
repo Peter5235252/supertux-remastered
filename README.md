@@ -3,8 +3,8 @@
 > **`SuperTux Remastered` is an independent, hobbyist remaster of
 > [SuperTux](https://github.com/SuperTux/supertux) — the © 2003–2026
 > SuperTux Team classic, written by Bill Kendrick, Ingo Ruhnke, and
-> contributors (see [ATTRIBUTION.md](ATTRIBUTION.md)).** It is **not a
-> sequel** and not an official SuperTux release.
+> contributors (see [ATTRIBUTION.md](ATTRIBUTION.md)).** It's **neither a
+> sequel** nor **an official SuperTux release.**
 >
 > **Where "SuperTux 2" comes from.** SuperTux development is divided into
 > major phases. **"Milestone 1"** (released in 2003) was the original game
