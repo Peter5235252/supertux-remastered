@@ -11,8 +11,8 @@
 > featuring basic mechanics and the *Icy Island* world. **"Milestone 2"**
 > (released as a stable version in 2016) introduced a completely rewritten
 > engine, a new level editor, and flexible screen resolutions — this is the
-> `supertux2` engine generation this project remasters. It is the same
-> project, not a separate game.
+> `supertux2` engine generation this project remasters. It's the same
+> project and not a separate game.
 >
 > **The renderer is native on every OS: Vulkan on Linux, Direct3D 12
 > on Windows (with a Vulkan fallback), Metal on macOS, and WebGL2 in the WASM port — all through
