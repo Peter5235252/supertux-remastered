@@ -53,8 +53,7 @@ The command-line instructions below are still fully supported.
 
 ## System requirements
 
-- **Desktop:** 4 GB RAM minimum; 8 GB recommended.
-- **Android:** 4 GB RAM minimum; 8 GB recommended.
+- **Desktop & Android:** 4 GB RAM minimum; 8 GB recommended.
 
 ## Download and play (test builds)
 
