@@ -15,13 +15,12 @@
 > project, not a separate game.
 >
 > **The renderer is native on every OS: Vulkan on Linux, Direct3D 12
-> on Windows (with a Vulkan fallback), and Metal on macOS — all through
+> on Windows (with a Vulkan fallback), Metal on macOS, and WebGL2 in the WASM port — all through
 > SDL_GPU, with OpenGL fully gone** (SDL and OpenGL backends deleted;
 > legacy names still map to the GPU renderer). **No translation layers.**
 > **macOS renders natively** (verified on a ThinkPad T480 Hackintosh with
 > Intel HD 620: `SDL_GPU driver: metal`, 180 frames, clean quit).
-> HDR output groundwork is included. This rewrite is **very fresh: expect
-> some instability and graphical glitches**. Changes are logged in
+> HDR is included. Changes are logged in
 > [CHANGELOG-FORK.md](CHANGELOG-FORK.md). Original license: GPL-3.0
 > ([LICENSE.txt](LICENSE.txt), unmodified); game data: CC-BY-SA.
 > The original upstream README is preserved below the fork-specific sections.
